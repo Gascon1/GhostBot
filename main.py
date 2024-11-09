@@ -5,7 +5,7 @@ import os
 from discord import app_commands
 from prettytable import PrettyTable
 
-from command.Die.die_command import rollDice
+from command.Die.die_command import rollAttackDice, rollDice
 
 MY_GUILD = discord.Object(id=1296556847976939571) 
 
@@ -47,10 +47,23 @@ async def hello(interaction: discord.Interaction):
     sides='The number of sides on each dice',
 )
 async def roll(interaction: discord.Interaction, number_of_dice: int, sides: int):
-    print(interaction.user.roles)
-    rolls = rollDice(number_of_dice,sides)
+    is_user_dead = any(x.name == "Dead" for x in interaction.user.roles)
+    rolls = rollDice(number_of_dice,sides,is_user_dead)
     if rolls.find("died") and not any(x.name == "Dead" for x in interaction.user.roles) :
+        await interaction.user.remove_roles(discord.Object(id=1304609401130324066))
         await interaction.user.add_roles(discord.Object(id=1304609190676922412))
+    if rolls.find("RISE") and not any(x.name == "ALIVE AND THRIVING" for x in interaction.user.roles) :
+        await interaction.user.remove_roles(discord.Object(id=1304609190676922412))
+        await interaction.user.add_roles(discord.Object(id=1304609401130324066))
+    await interaction.response.send_message(f'{rolls}')
+
+
+@client.tree.command()
+@app_commands.describe(
+    target='The target of your attack',
+)
+async def attack(interaction: discord.Interaction, target: str):
+    rolls = rollAttackDice(target)
     await interaction.response.send_message(f'{rolls}')
 
 
