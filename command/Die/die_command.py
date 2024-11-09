@@ -47,7 +47,7 @@ def rollDice(rolls, sides, is_user_dead):
         table.add_column('sum',[sum_rolls])
         table.set_style(_DEPRECATED_DOUBLE_BORDER)
         if dying:
-            return  '```' + 'You\'ve encountered a slime, time to fight!' + """ 
+            return  {"text":'```' + 'You\'ve encountered a slime, time to fight!' + """ 
                     ██████████                
             ████████░░░░░░░░░░████████        
         ██░░░░░░░░░░░░░░░░░░░░░░░░░░██      
@@ -66,8 +66,9 @@ def rollDice(rolls, sides, is_user_dead):
     ██░░░░░░░░░░░░░░░░░░                ░░░░██
     ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░████
         ██████████████████████████████████    
-    """ + table.get_string() + '```' + 'RUH ROH , you died :skull:'
-        return '```' + 'You\'ve encountered a slime, time to fight!' + """
+    """ + """ 
+""" + table.get_string() + '```' + 'RUH ROH , you died :skull:', "died": 1, "revived":0 }
+        return {"text":'```' + 'You\'ve encountered a slime, time to fight!' + """
 
                     ██████████                
             ████████░░░░░░░░░░████████        
@@ -86,8 +87,10 @@ def rollDice(rolls, sides, is_user_dead):
     ██░░░░░░░░░░░░░░                      ░░██
     ██░░░░░░░░░░░░░░░░░░                ░░░░██
     ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░████
-        ██████████████████████████████████    
-    """ + table.get_string() + '```'
+        ██████████████████████████████████ 
+           
+        """ + """ 
+""" + table.get_string() + '```', "died":0, "revived":0}
     while count < rolls:
         single_roll = d1.roll()
         if (single_roll == last_roll and single_roll == "6"):
@@ -106,7 +109,7 @@ def rollDice(rolls, sides, is_user_dead):
     table.add_column('sum',[sum_rolls])
     table.set_style(_DEPRECATED_DOUBLE_BORDER)
     if reroll and rolls == 2 and sides == 6:
-        return '```' + 'You\'ve traveled far mighty one, don\'t give up, one more roll for glory!' + """
+        return {"text":'```' + 'You\'ve traveled far mighty one, don\'t give up, one more roll for glory!' + """
 
 
 
@@ -119,9 +122,9 @@ def rollDice(rolls, sides, is_user_dead):
 
  
     """ + """ 
-""" + table.get_string() + '```'
+""" + table.get_string() + '```',"died":0,"revived":0}
     if reviving and rolls == 2 and sides == 6:
-        return '```' + 'The fight isn\'t over warrior, may your new life be fruitful, RISE!' + """
+        return {"text":'```' + 'The fight isn\'t over warrior, may your new life be fruitful, RISE!' + """
      .-.
    __| |__
   [__   __]
@@ -131,9 +134,9 @@ def rollDice(rolls, sides, is_user_dead):
      '-'
 
         """ + """ 
-"""  + table.get_string() + '```'
+"""  + table.get_string() + '```',"died":0,"revived":1}
     if rolls == 2 and sides == 6:
-        return '```' + 'This wasn\'t your time,  keep going warrior!' + """
+        return {"text":'```' + 'This wasn\'t your time,  keep going warrior!' + """
          _   _  ___  ____  _____ 
         | | | |/ _ \|  _ \| ____|
         | |_| | | | | |_) |  _|  
@@ -141,9 +144,9 @@ def rollDice(rolls, sides, is_user_dead):
         |_| |_|\___/|_|   |_____|
             
           """ + """ 
-""" + table.get_string() + '```'
+""" + table.get_string() + '```',"died":0,"revived":0}
     
-    return '```' + 'You\'re tempting fate, go get her!' + """
+    return {"text":'```' + 'You\'re tempting fate, go get her!' + """
 
 
      _____ _  _____ _____ 
@@ -154,7 +157,7 @@ def rollDice(rolls, sides, is_user_dead):
 
 
             """ + """ 
-        """ + table.get_string() + '```'
+""" + table.get_string() + '```',"died":0,"revived":0}
     
 
 

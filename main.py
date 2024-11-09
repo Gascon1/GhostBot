@@ -49,13 +49,15 @@ async def hello(interaction: discord.Interaction):
 async def roll(interaction: discord.Interaction, number_of_dice: int, sides: int):
     is_user_dead = any(x.name == "Dead" for x in interaction.user.roles)
     rolls = rollDice(number_of_dice,sides,is_user_dead)
-    if rolls.find("died") and not any(x.name == "Dead" for x in interaction.user.roles) :
+    if rolls['died'] == 1 and not any(x.name == "Dead" for x in interaction.user.roles) :
         await interaction.user.remove_roles(discord.Object(id=1304609401130324066))
         await interaction.user.add_roles(discord.Object(id=1304609190676922412))
-    if rolls.find("RISE") and not any(x.name == "ALIVE AND THRIVING" for x in interaction.user.roles) :
+        print("should die")
+    if rolls['revived'] == 1 and not any(x.name == "ALIVE AND THRIVING" for x in interaction.user.roles) :
         await interaction.user.remove_roles(discord.Object(id=1304609190676922412))
         await interaction.user.add_roles(discord.Object(id=1304609401130324066))
-    await interaction.response.send_message(f'{rolls}')
+        print("should revive")
+    await interaction.response.send_message(f'{rolls["text"]}')
 
 
 @client.tree.command()
@@ -65,6 +67,12 @@ async def roll(interaction: discord.Interaction, number_of_dice: int, sides: int
 async def attack(interaction: discord.Interaction, target: str):
     rolls = rollAttackDice(target)
     await interaction.response.send_message(f'{rolls}')
+
+
+@client.tree.command()
+async def status(interaction: discord.Interaction):
+    is_user_dead = any(x.name == "Dead" for x in interaction.user.roles)
+    await interaction.response.send_message(f':new_moon_with_face: Dead') if is_user_dead else await interaction.response.send_message(f':full_moon_with_face: Alive')
 
 
 @client.event
