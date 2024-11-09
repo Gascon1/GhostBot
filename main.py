@@ -2,66 +2,77 @@ import discord
 import random
 from discord.ext import tasks,commands
 import os
+from discord import app_commands
 from prettytable import PrettyTable
 
+from command.Die.die_command import rollDice
 
-class Die(object):
-    def __init__(self, sides=6):
-        self.sides = sides
+MY_GUILD = discord.Object(id=1296556847976939571) 
 
-    def roll(self):
-        return random.randint(1,self.sides)
-    
-    def get (self):
-        return self.roll_count
-    
 
-def rollDice(rolls, sides):
-    roll_results = []
-    d1 = Die(sides)
-    count = 0
-    while count <=rolls:
-        roll_results.append(d1.roll())
-        count+=1
-    return roll_results
-    
 
+class MyClient(discord.Client):
+    def __init__(self, *, intents: discord.Intents):
+        super().__init__(intents=intents)
+        # A CommandTree is a special type that holds all the application command
+        # state required to make it work. This is a separate class because it
+        # allows all the extra state to be opt-in.
+        # Whenever you want to work with application commands, your tree is used
+        # to store and work with them.
+        # Note: When using commands.Bot instead of discord.Client, the bot will
+        # maintain its own tree instead.
+        self.tree = app_commands.CommandTree(self)
+
+    # In this basic example, we just synchronize the app commands to one guild.
+    # Instead of specifying a guild to every command, we copy over our global commands instead.
+    # By doing so, we don't have to wait up to an hour until they are shown to the end-user.
+    async def setup_hook(self):
+        # This copies the global commands over to your guild.
+        self.tree.copy_global_to(guild=MY_GUILD)
+        await self.tree.sync(guild=MY_GUILD)
 
 intents = discord.Intents.default()
 intents.message_content = True
+client = MyClient(intents=intents)
 
-bot = commands.Bot("!",intents=intents)
+@client.tree.command()
+async def hello(interaction: discord.Interaction):
+    """Says hello!"""
+    await interaction.response.send_message(f'Hi, {interaction.user.mention}')
 
-@bot.command()
-async def test(ctx, arg):
-    await ctx.send(arg)
 
-@bot.event
+@client.tree.command()
+@app_commands.describe(
+    number_of_dice='The number of dice you want to roll',
+    sides='The number of sides on each dice',
+)
+async def roll(interaction: discord.Interaction, number_of_dice: int, sides: int):
+    print(interaction.user.roles)
+    rolls = rollDice(number_of_dice,sides)
+    if rolls.find("died") and not any(x.name == "Dead" for x in interaction.user.roles) :
+        await interaction.user.add_roles(discord.Object(id=1304609190676922412))
+    await interaction.response.send_message(f'{rolls}')
+
+
+@client.event
 async def on_ready():
-    print(f'We have logged in as {bot.user}')
-    print(bot.all_commands)
-    #remind_to_roll.start(bot.get_guild(1296556847976939571))
+    print(f'We have logged in as {client.user}')
+    #await tree.sync(guild=discord.Object(id=1296556847976939571))
+    #print(f'Ready')
+    #remind_to_roll.start(client.get_guild(1296556847976939571))
 
-@bot.event
-async def on_message(message):
-    print(message.content)
-    if message.author == bot.user:
-        return
-
-    if message.content.startswith('$hello'):
-        await message.channel.send('Hello!')
 
 @tasks.loop(hours=1)
 async def remind_to_roll(server: discord.Guild):
-    await bot.wait_until_ready()
-    channel = bot.get_channel(1296556852468908034)
+    await client.wait_until_ready()
+    channel = client.get_channel(1296556852468908034)
     #role = server.get_role(1304609190676922412)
     allowed_mentions = discord.AllowedMentions.all()
     await channel.send(content="<@&1304609190676922412> TIME TO GET IT TWISTED", allowed_mentions=allowed_mentions)
 
 
 
-bot.run(os.getenv('TOKEN'))
+client.run(os.getenv('TOKEN'))
 
 
 
