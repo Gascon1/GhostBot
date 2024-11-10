@@ -19,6 +19,7 @@
   "homepage": "https://github.com/DominikDupuis/GhostBot#readme",
   "description": "",
   "dependencies": {
+    "ascii-table": "^0.0.9",
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5"
   },

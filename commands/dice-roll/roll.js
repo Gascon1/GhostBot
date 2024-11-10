@@ -1,5 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { rollDice } = require('../../src/dice-roll');
+const { rollDice } = require('../../lib/dice-roll');
+const { createAsciiTable } = require('../../lib/create-ascii-table');
+const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -19,30 +21,14 @@ module.exports = {
     const rolls = interaction.options.getInteger('rolls');
     const sides = interaction.options.getInteger('sides');
 
-    console.log(rolls, sides);
-
     const rollResults = rollDice(rolls, sides);
-    await interaction.reply(`You rolled: ${rollResults.join(', ')}`);
+    const tableString = createAsciiTable(rolls, sides, rollResults);
+
+    await interaction.reply('```' + '\n' + tableString + '```');
 
     const { member } = interaction;
-    const hasRolledOne = rollResults.includes(1);
-    const hasDoubleSix = rollResults.filter((roll) => roll === 6).length >= 2;
     const deadRole = interaction.guild.roles.cache.find((role) => role.name === 'Dead');
 
-    if (hasRolledOne) {
-      if (deadRole && !member.roles.cache.has(deadRole.id)) {
-        await member.roles.add(deadRole);
-        const newNickname = `Ghost of ${member.displayName} 👻`;
-        await member.setNickname(newNickname);
-        console.log(`Role ${deadRole.name} added to ${member.user.tag} and nickname changed to ${newNickname}`);
-      }
-    } else if (hasDoubleSix && member.roles.cache.has(deadRole.id)) {
-      await member.roles.remove(deadRole);
-      const originalNickname = member.displayName.replace(/^Ghost of /, '').replace(/ 👻$/, '');
-      await member.setNickname(originalNickname);
-      console.log(`Role ${deadRole.name} removed from ${member.user.tag} and nickname restored to ${originalNickname}`);
-    } else {
-      console.log('No role change required');
-    }
+    await updateUserRoleAndNickname(member, rollResults, deadRole);
   },
 };
