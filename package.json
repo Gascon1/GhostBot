@@ -1,0 +1,30 @@
+{
+  "name": "ghostbot",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node main.js",
+    "deploy-commands": "node deploy-commands.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DominikDupuis/GhostBot.git"
+  },
+  "author": "The Four Meeples",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DominikDupuis/GhostBot/issues"
+  },
+  "homepage": "https://github.com/DominikDupuis/GhostBot#readme",
+  "description": "",
+  "dependencies": {
+    "ascii-table": "^0.0.9",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "eslint": "^9.14.0",
+    "prettier": "^3.3.3"
+  }
+}
