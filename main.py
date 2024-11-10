@@ -1,11 +1,11 @@
 import discord
-import random
 from discord.ext import tasks,commands
 import os
 from discord import app_commands
-from prettytable import PrettyTable
+import json
 
 from command.Die.die_command import rollAttackDice, rollDice
+from util.get_user_data import get_user_data
 
 MY_GUILD = discord.Object(id=1296556847976939571) 
 
@@ -84,7 +84,14 @@ async def attack(interaction: discord.Interaction, target: str):
 @client.tree.command()
 async def status(interaction: discord.Interaction):
     is_user_dead = any(x.name == "Dead" for x in interaction.user.roles)
-    await interaction.response.send_message(f':new_moon_with_face: Dead') if is_user_dead else await interaction.response.send_message(f':full_moon_with_face: Alive')
+    user_data = await get_user_data(str(interaction.user.id))
+    await interaction.response.send_message(
+f"""Status : Dead :new_moon_with_face:
+Exp: {user_data["exp"]}
+Revival count: {user_data["revive_count"]}""") if is_user_dead else await interaction.response.send_message(
+f"""Status: Alive :full_moon_with_face:
+Exp: {user_data["exp"]}
+Revival count: {user_data["revive_count"]}""")
 
 
 @client.event
