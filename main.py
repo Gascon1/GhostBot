@@ -33,6 +33,7 @@ class MyClient(discord.Client):
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 client = MyClient(intents=intents)
 
 @client.tree.command()
@@ -46,14 +47,25 @@ async def hello(interaction: discord.Interaction):
     number_of_dice='The number of dice you want to roll',
     sides='The number of sides on each dice',
 )
+@commands.has_guild_permissions(change_nickname=True)
 async def roll(interaction: discord.Interaction, number_of_dice: int, sides: int):
     is_user_dead = any(x.name == "Dead" for x in interaction.user.roles)
     rolls = rollDice(number_of_dice,sides,is_user_dead)
     if rolls['died'] == 1 and not any(x.name == "Dead" for x in interaction.user.roles) :
+        await interaction.user.edit(nick='Ghost of '+interaction.user.nick + '👻')
         await interaction.user.remove_roles(discord.Object(id=1304609401130324066))
         await interaction.user.add_roles(discord.Object(id=1304609190676922412))
         print("should die")
+    await interaction.response.send_message(f'{rolls["text"]}')
+
+@client.tree.command()
+
+@commands.has_guild_permissions(change_nickname=True)
+async def revive(interaction: discord.Interaction, ):
+    is_user_dead = any(x.name == "Dead" for x in interaction.user.roles)
+    rolls = rollDice(2,6,is_user_dead)
     if rolls['revived'] == 1 and not any(x.name == "ALIVE AND THRIVING" for x in interaction.user.roles) :
+        await interaction.user.edit(nick=interaction.user.nick.split("Ghost of ")[0].split['👻'][0])
         await interaction.user.remove_roles(discord.Object(id=1304609190676922412))
         await interaction.user.add_roles(discord.Object(id=1304609401130324066))
         print("should revive")
