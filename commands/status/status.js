@@ -26,7 +26,7 @@ module.exports = {
 
     if (isDead) {
       await interaction.reply(
-        'Status: Dead :skull:' + '\n' + 'Revive attempts: ' + userData.revive_count + '\n' + 'Exp: ' + userData.exp,
+        'Status: Dead :skull:' + '\n' + 'Revive attempts: ' + userData.reviveAttempts + '\n' + 'Exp: ' + userData.exp,
       );
     } else {
       await interaction.reply('Status: Alive :heart:' + '\n' + 'Exp: ' + userData.exp);
