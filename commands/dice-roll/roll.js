@@ -29,7 +29,7 @@ module.exports = {
     const tableString = createAsciiTable(rolls, sides, rollResults);
     const asciiMessage = determineAsciiArt(rollResults, member, odds, deadRole);
 
-    await interaction.reply('```' + '\n' + asciiMessage + '\n' + tableString + '```');
+    await interaction.reply(asciiMessage.flavor + '\n' + '```' + '\n' + asciiMessage.art + '\n' + tableString + '```' + '\n' + asciiMessage.end);
 
     await updateUserRoleAndNickname(member, rollResults, deadRole);
   },
