@@ -22,6 +22,6 @@ module.exports = {
         const sides = interaction.options.getInteger('sides');
         const odds = determineOdds(rolls, sides);
 
-        await interaction.reply('```' + '\n' + "Here's the odds for " + rolls + "d" + sides + '\n' + "Survival: " + odds.survival + '\n' + 'Death: ' + odds.death + '```');
+        await interaction.reply('```' + '\n' + "Here's the odds for " + rolls + "d" + sides + '\n' + "Survival: " + odds + '```');
     },
 };
