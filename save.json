@@ -1,18 +1,19 @@
 {
   "134315165171580928": {
-    "revive_count": 18,
+    "reviveAttempts": 18,
     "exp": 0
   },
   "106555295186051072": {
-    "revive_count": 40,
-    "exp": 0
+    "reviveAttempts": 40,
+    "exp": 0,
+    "lastReviveAttemptTime": "18:00"
   },
   "177948962626469889": {
-    "revive_count": 18,
+    "reviveAttempts": 18,
     "exp": 0
   },
   "141305274936983552": {
-    "revive_count": 8,
+    "reviveAttempts": 8,
     "exp": 0
   }
 }
