@@ -61,25 +61,23 @@ module.exports = {
 
     const coinMessage = await interaction.channel.send(displayedCoins.join(' '));
 
-    const rollingCoinsInterval = setInterval(async () => {
-      displayedCoins[resultsShown] =
-        rollResults[resultsShown] === 1 ? oopsCoin : meepleEmojis[colorOrder[resultsShown]].coinStatic;
+    async function updateCoins() {
+      for (let index = 0; index <= 3; index++) {
+        displayedCoins[index] = rollResults[index] === 1 ? oopsCoin : meepleEmojis[colorOrder[index]].coinStatic;
+        await coinMessage.edit(displayedCoins.join(' '));
 
-      await coinMessage.edit(displayedCoins.join(' '));
-
-      if (resultsShown >= 3) {
-        await initialMessage.edit(`<@${interaction.user.id}>'s fate has been sealed`);
-        clearInterval(rollingCoinsInterval);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      resultsShown += 1;
-    }, 1000);
+
+      await initialMessage.edit(`<@${interaction.user.id}>'s fate has been sealed`);
+    }
+
+    await updateCoins();
 
     const { member } = interaction;
     const deadRole = interaction.guild.roles.cache.find((role) => role.name === 'Dead');
 
-    setTimeout(async () => {
-      await updateUserRoleAndNickname(member, rollResults, deadRole);
-    }, 4000);
+    await updateUserRoleAndNickname(member, rollResults, deadRole);
   },
 };
 
