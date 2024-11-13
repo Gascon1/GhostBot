@@ -140,11 +140,11 @@ D${sides}: ${challengerRollResult.toString().padStart(2, ' ')}   -   ${opponentR
             await interaction.followUp('Everyone rolled a 1 and died. No one is victorious!');
 
             if (!challengerIsDead) {
-              await updateUserRoleAndNickname(member, [1], deadRole);
+              await updateUserRoleAndNickname(member, 'died', deadRole);
             }
 
             if (!opponentIsDead) {
-              await updateUserRoleAndNickname(opponent, [1], deadRole);
+              await updateUserRoleAndNickname(opponent, 'died', deadRole);
             }
 
             return;
@@ -164,11 +164,11 @@ D${sides}: ${challengerRollResult.toString().padStart(2, ' ')}   -   ${opponentR
             );
 
             if (!challengerIsDead) {
-              await updateUserRoleAndNickname(member, [1], deadRole);
+              await updateUserRoleAndNickname(member, 'died', deadRole);
             }
 
             if (!challengerIsDead && opponentIsDead) {
-              await updateUserRoleAndNickname(opponent, [2, 2, 2, 2], deadRole);
+              await updateUserRoleAndNickname(opponent, 'revived', deadRole);
             }
 
             return;
@@ -188,7 +188,7 @@ D${sides}: ${challengerRollResult.toString().padStart(2, ' ')}   -   ${opponentR
             );
 
             if (!opponentIsDead) {
-              await updateUserRoleAndNickname(opponent, [1], deadRole);
+              await updateUserRoleAndNickname(opponent, 'died', deadRole);
             }
 
             return;

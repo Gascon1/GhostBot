@@ -77,7 +77,8 @@ module.exports = {
     const { member } = interaction;
     const deadRole = interaction.guild.roles.cache.find((role) => role.name === 'Dead');
 
-    await updateUserRoleAndNickname(member, rollResults, deadRole);
+    const outcome = rollResults.every((roll) => roll === 2) ? 'revived' : 'neutral';
+    await updateUserRoleAndNickname(member, outcome, deadRole);
   },
 };
 
