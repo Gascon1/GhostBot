@@ -57,7 +57,6 @@ module.exports = {
         await buttonInteraction.update({ content: `${opponent} accepted the duel!`, components: [] });
 
         let sides = 20;
-        let memberRoll, opponentRoll;
 
         const challengerMeeple = Object.values(meepleEmojis).find((meeple) => meeple.userId === member.id);
         const opponentMeeple = Object.values(meepleEmojis).find((meeple) => meeple.userId === opponent.id);

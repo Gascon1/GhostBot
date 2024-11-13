@@ -1,6 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { rollDice } = require('../../lib/dice-roll');
-const { createAsciiTable } = require('../../lib/create-ascii-table');
 const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
 const { meepleEmojis, oopsCoin } = require('../../lib/meeple-data');
 
@@ -24,7 +23,7 @@ module.exports = {
 
     try {
       saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
-    } catch (error) {
+    } catch {
       saveData = {};
     }
 
@@ -49,8 +48,7 @@ module.exports = {
     const rollResults = rollDice(4, 2);
     const colorOrder = ['blue', 'red', 'yellow', 'green'];
 
-    let displayedCoins = colorOrder.map((color) => meepleEmojis[color].coinFlipping);
-    let resultsShown = 0;
+    const displayedCoins = colorOrder.map((color) => meepleEmojis[color].coinFlipping);
 
     await interaction.reply('.');
     await interaction.deleteReply();

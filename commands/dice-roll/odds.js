@@ -1,6 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { determineOdds } = require('../../lib/determine-odds');
-const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
 
 module.exports = {
   data: new SlashCommandBuilder()
