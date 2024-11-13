@@ -1,35 +1,8 @@
 const { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { rollDice } = require('../../lib/dice-roll');
 const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
+const { meepleEmojis } = require('../../lib/meeple-data');
 
-const meepleEmojis = {
-  blue: {
-    meeple: '<:blueMeeple:1305234250739744798>',
-    coinFlipping: '<a:blueFlip:1305327395900883034>',
-    coinStatic: '<:blue1:1305250818240282714>',
-    userId: '141305274936983552',
-  },
-  red: {
-    meeple: '<:redMeeple:1305234281727004783>',
-    coinFlipping: '<a:redFlip:1305327396852858942>',
-    coinStatic: '<:red1:1305250820526313553>',
-    userId: '177948962626469889',
-  },
-  yellow: {
-    meeple: '<:yellowMeeple:1305234312957919283>',
-    coinFlipping: '<a:yellowFlip:1305337174052311051>',
-    coinStatic: '<:yellow1:1305250821482479636>',
-    userId: '106555295186051072',
-  },
-  green: {
-    meeple: '<:greenMeeple:1305234202551128167>',
-    coinFlipping: '<a:greenFlip:1305323911940018268>',
-    coinStatic: '<:green1:1305250818924220437>',
-    userId: '134315165171580928',
-  },
-};
-
-const oopsCoin = '<:oopsCoin:1305251655612366930>';
 
 module.exports = {
   data: new SlashCommandBuilder()
