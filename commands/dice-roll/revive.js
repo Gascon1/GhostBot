@@ -8,6 +8,8 @@ const path = require('path');
 
 const saveFilePath = path.join(__dirname, '../../save.json');
 
+const revivalCouncil = `${meepleEmojis.red.meeple} ${meepleEmojis.yellow.meeple} __**Revival Council**__ ${meepleEmojis.green.meeple} ${meepleEmojis.blue.meeple}`;
+
 module.exports = {
   data: new SlashCommandBuilder().setName('revive').setDescription('Attempt a revival roll to join the living'),
   /**
@@ -32,7 +34,7 @@ module.exports = {
     // Check if the user has attempted a revive in the current half-hour
     if (saveData[userId].lastReviveAttemptTime === currentAttemptTime) {
       await interaction.reply(
-        `${meepleEmojis.blue.meeple} ${meepleEmojis.red.meeple} __**Revival Council**__ ${meepleEmojis.yellow.meeple} ${meepleEmojis.green.meeple}` +
+        revivalCouncil +
           '\n' +
           'We have already discussed your fate this half-hour. Come back in the next half hour.' +
           '\n' +
@@ -46,7 +48,7 @@ module.exports = {
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2));
 
     const rollResults = rollDice(4, 2);
-    const colorOrder = ['blue', 'red', 'yellow', 'green'];
+    const colorOrder = ['red', 'yellow', 'green', 'blue'];
 
     const displayedCoins = colorOrder.map((color) => meepleEmojis[color].coinFlipping);
 
@@ -55,9 +57,7 @@ module.exports = {
 
     const initialMessage = await interaction.channel.send(`<@${interaction.user.id}>'s fate is being discussed...`);
 
-    await interaction.channel.send(
-      `${meepleEmojis.blue.meeple} ${meepleEmojis.red.meeple} __**Revival Council**__ ${meepleEmojis.yellow.meeple} ${meepleEmojis.green.meeple}`,
-    );
+    await interaction.channel.send(revivalCouncil);
 
     const coinMessage = await interaction.channel.send(displayedCoins.join(' '));
 
