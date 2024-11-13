@@ -4,6 +4,7 @@ const { createAsciiTable } = require('../../lib/create-ascii-table');
 const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
 const { determineAsciiArt } = require('../../lib/determine-ascii-art');
 const { determineOdds } = require('../../lib/determine-odds');
+const { determineXp } = require('../../lib/determine-xp');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -24,13 +25,27 @@ module.exports = {
     const rolls = interaction.options.getInteger('rolls');
     const sides = interaction.options.getInteger('sides');
     const deadRole = interaction.guild.roles.cache.find((role) => role.name === 'Dead');
+
     const odds = determineOdds(rolls, sides);
+    const xp = determineXp(odds);
+
     const rollResults = rollDice(rolls, sides);
     const tableString = createAsciiTable(rolls, sides, rollResults);
-    const asciiMessage = determineAsciiArt(rollResults, member, odds, deadRole);
+    const asciiMessage = determineAsciiArt(rollResults, member, odds, deadRole, xp);
 
-    await interaction.reply(asciiMessage.flavor + '\n' + '```' + '\n' + asciiMessage.art + '\n' + tableString + '```' + '\n' + asciiMessage.end);
+    await interaction.reply(
+      asciiMessage.flavor +
+        '\n' +
+        '```' +
+        '\n' +
+        asciiMessage.art +
+        '\n' +
+        tableString +
+        '```' +
+        '\n' +
+        asciiMessage.end,
+    );
 
-    await updateUserRoleAndNickname(member, rollResults, deadRole);
+    await updateUserRoleAndNickname(member, rollResults, deadRole, xp);
   },
 };

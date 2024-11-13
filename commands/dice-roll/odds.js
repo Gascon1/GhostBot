@@ -21,7 +21,16 @@ module.exports = {
     const odds = determineOdds(rolls, sides);
 
     await interaction.reply(
-      '```' + '\n' + "Here's the odds for " + rolls + 'd' + sides + '\n' + 'Survival: ' + odds + '```',
+      '```' +
+        '\n' +
+        "Here's the odds for " +
+        rolls +
+        'd' +
+        sides +
+        '\n' +
+        'Survival: ' +
+        `${(odds * 100).toFixed(3)}%` +
+        '```',
     );
   },
 };

@@ -60,7 +60,6 @@ export default [
       'no-console': 'off',
       'no-empty-function': 'error',
       'no-floating-decimal': 'error',
-      'no-inline-comments': 'error',
       'no-lonely-if': 'error',
       'no-multi-spaces': 'error',
 
