@@ -29,8 +29,6 @@ const meepleEmojis = {
   },
 };
 
-const oopsCoin = '<:oopsCoin:1305251655612366930>';
-
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('duel')
@@ -47,6 +45,11 @@ module.exports = {
 
     if (!opponent) {
       await interaction.reply('Opponent not found.');
+      return;
+    }
+
+    if (opponent.id === member.id) {
+      await interaction.reply('You cannot duel yourself. Are you trying to die!? :scream:');
       return;
     }
 
