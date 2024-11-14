@@ -71,7 +71,6 @@ module.exports = {
       );
 
       saveData[userId].lastReviveAttemptTime = null;
-      saveData[userId].remainingFightAttempts = 0;
     } else {
       await interaction.reply(
         asciiMessage.flavor +
