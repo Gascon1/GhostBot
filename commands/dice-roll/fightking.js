@@ -36,7 +36,7 @@ module.exports = {
     }
 
     const userId = member.user.id;
-    const remainingFightKingAttempts = saveData[userId]?.remainingFightKingAttempts || 0;
+    const remainingFightKingAttempts = saveData[userId]?.remainingFightAttempts || 0;
 
     // Check if any fight attempts left
     if (remainingFightKingAttempts < 1) {

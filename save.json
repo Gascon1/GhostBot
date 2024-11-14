@@ -1,24 +1,26 @@
 {
   "134315165171580928": {
-    "reviveAttempts": 14,
+    "reviveAttempts": 15,
     "xp": 0,
     "allTimeHighXp": 154,
-    "lastReviveAttemptTime": "22:00",
+    "lastReviveAttemptTime": "13:30",
     "remainingFightAttempts": 3
   },
   "106555295186051072": {
-    "reviveAttempts": 1,
+    "reviveAttempts": 2,
     "xp": 0,
     "allTimeHighXp": 105,
-    "lastReviveAttemptTime": "22:00",
-    "remainingFightAttempts": 3
+    "lastReviveAttemptTime": "13:30",
+    "remainingFightAttempts": 3,
+    "remainingFightKingAttempts": -2
   },
   "177948962626469889": {
-    "reviveAttempts": 6,
+    "reviveAttempts": 7,
     "xp": 0,
     "allTimeHighXp": 106,
-    "lastReviveAttemptTime": "22:00",
-    "remainingFightAttempts": 3
+    "lastReviveAttemptTime": "13:30",
+    "remainingFightAttempts": 3,
+    "remainingFightKingAttempts": -4
   },
   "141305274936983552": {
     "reviveAttempts": 1,
