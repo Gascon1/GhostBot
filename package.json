@@ -22,7 +22,8 @@
   "dependencies": {
     "ascii-table": "^0.0.9",
     "discord.js": "^14.16.3",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",

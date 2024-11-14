@@ -36,12 +36,11 @@ module.exports = {
     }
 
     const userId = member.user.id;
-    const currentTime = Date.now();
-    const lastFightTime = saveData[userId]?.lastFightKingTime || 0;
+    const remainingFightKingAttempts = saveData[userId]?.remainingFightKingAttempts || 0;
 
-    // Check if 5 minutes have passed since the last fight
-    if (currentTime - lastFightTime < 5 * 60 * 1000) {
-      await interaction.reply('You can only fight the king of ghosts once every 5 minutes. Please try again later.');
+    // Check if any fight attempts left
+    if (remainingFightKingAttempts < 1) {
+      await interaction.reply('You ran out of fight attempts. Please try again later.');
       return;
     }
 
@@ -69,7 +68,7 @@ module.exports = {
           'Congratulations! You defeated the king of ghosts and gained another revive attempt!',
       );
 
-      saveData[userId].lastReviveAttemptTime = null;
+      saveData[userId].remainingFightKingAttempts = 0;
     } else {
       await interaction.reply(
         asciiMessage.flavor +
@@ -90,7 +89,7 @@ module.exports = {
       saveData[userId] = {};
     }
 
-    saveData[userId].lastFightKingTime = currentTime;
+    saveData[userId].remainingFightKingAttempts -= 1;
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2), 'utf8');
   },
 };

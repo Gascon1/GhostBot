@@ -3,6 +3,7 @@ require('dotenv').config();
 const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const { grantFightKingAttemptsTask } = require('./jobs/grant-fight-king-attempts');
 
 // Create a new client instance
 const client = new Client({
@@ -55,6 +56,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 // The distinction between `client: Client<boolean>` and `readyClient: Client<true>` is important for TypeScript developers.
 // It makes some properties non-nullable.
 client.once(Events.ClientReady, (readyClient) => {
+  grantFightKingAttemptsTask.start();
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
 
