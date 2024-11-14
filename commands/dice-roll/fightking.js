@@ -36,10 +36,10 @@ module.exports = {
     }
 
     const userId = member.user.id;
-    const remainingFightKingAttempts = saveData[userId]?.remainingFightAttempts || 0;
+    const remainingFightAttempts = saveData[userId]?.remainingFightAttempts || 0;
 
     // Check if any fight attempts left
-    if (remainingFightKingAttempts < 1) {
+    if (remainingFightAttempts < 1) {
       await interaction.reply('You ran out of fight attempts. Please try again later.');
       return;
     }
@@ -68,7 +68,7 @@ module.exports = {
           'Congratulations! You defeated the king of ghosts and gained another revive attempt!',
       );
 
-      saveData[userId].remainingFightKingAttempts = 0;
+      saveData[userId].remainingFightAttempts = 0;
     } else {
       await interaction.reply(
         asciiMessage.flavor +
@@ -89,7 +89,7 @@ module.exports = {
       saveData[userId] = {};
     }
 
-    saveData[userId].remainingFightKingAttempts -= 1;
+    saveData[userId].remainingFightAttempts -= 1;
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2), 'utf8');
   },
 };
