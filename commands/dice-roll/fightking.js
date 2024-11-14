@@ -2,7 +2,6 @@ const { SlashCommandBuilder } = require('discord.js');
 const { rollDice } = require('../../lib/dice-roll');
 const { createAsciiTable } = require('../../lib/create-ascii-table');
 const { determineAsciiArt } = require('../../lib/determine-ascii-art');
-const { handleBetOutcome } = require('../../lib/handle-bet-outcome');
 const { determinePerfectRollOdds } = require('../../lib/determine-odds');
 const { determineXp } = require('../../lib/determine-xp');
 const fs = require('fs');
@@ -54,7 +53,7 @@ module.exports = {
     const xp = determineXp(odds);
 
     const outcome = isPerfectRoll ? 'neutral' : 'died';
-    const asciiMessage = determineAsciiArt(outcome, member, odds, deadRole, xp);
+    const asciiMessage = determineAsciiArt(outcome, member, odds, deadRole, xp, true);
 
     if (isPerfectRoll) {
       await interaction.reply(
@@ -70,8 +69,7 @@ module.exports = {
           'Congratulations! You defeated the king of ghosts and gained another revive attempt!',
       );
 
-      // Reset the last revive attempt time
-      handleBetOutcome([member.user.id]);
+      saveData[userId].lastReviveAttemptTime = null;
     } else {
       await interaction.reply(
         asciiMessage.flavor +
@@ -91,6 +89,7 @@ module.exports = {
     if (!saveData[userId]) {
       saveData[userId] = {};
     }
+
     saveData[userId].lastFightKingTime = currentTime;
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2), 'utf8');
   },
