@@ -100,6 +100,8 @@ module.exports = {
      * @param {import('discord.js').ButtonInteraction} buttonInteraction - The button interaction.
      */
     collector.on('collect', async (buttonInteraction) => {
+      console.log(buttonInteraction);
+
       if (buttonInteraction.customId === 'acceptDuel') {
         await buttonInteraction.update({ content: `${opponent} accepted the duel!`, components: [] });
 
@@ -155,12 +157,13 @@ D${sides}: ${challengerRollResult.toString().padStart(2, ' ')}   -   ${opponentR
 
             const betWinners = [...bets.opponent];
             const winnerMentions = betWinners.map((id) => `<@${id}>`).join(', ');
+            const betWinnersString =
+              betWinners.length > 0 ? `Congratulations to ${winnerMentions} for winning the bet!` : '';
+
             handleBetOutcome(bets.opponent);
 
             await interaction.followUp(
-              `${member} rolled a 1 and died. ${opponent} is victorious!` +
-                '\n' +
-                `Congratulations to ${winnerMentions} for winning the bet! You get a free attempt at reviving.`,
+              `${member} rolled a 1 and died. ${opponent} is victorious!` + '\n' + betWinnersString,
             );
 
             if (!challengerIsDead) {
@@ -179,12 +182,13 @@ D${sides}: ${challengerRollResult.toString().padStart(2, ' ')}   -   ${opponentR
 
             const betWinners = [...bets.challenger];
             const winnerMentions = betWinners.map((id) => `<@${id}>`).join(', ');
+            const betWinnersString =
+              betWinners.length > 0 ? `Congratulations to ${winnerMentions} for winning the bet!` : '';
+
             handleBetOutcome(bets.challenger);
 
             await interaction.followUp(
-              `${opponent} rolled a 1 and died. ${member} is victorious!` +
-                '\n' +
-                `Congratulations to ${winnerMentions} for winning the bet! You get a free attempt at reviving.`,
+              `${opponent} rolled a 1 and died. ${member} is victorious!` + '\n' + betWinnersString,
             );
 
             if (!opponentIsDead) {
