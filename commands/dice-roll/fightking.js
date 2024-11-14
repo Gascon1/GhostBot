@@ -44,11 +44,11 @@ module.exports = {
       return;
     }
 
-    const rollResults = rollDice(1, 10);
-    const isPerfectRoll = rollResults[0] === 10;
-    const tableString = createAsciiTable(1, 10, rollResults);
+    const rollResults = rollDice(1, 5);
+    const isPerfectRoll = rollResults[0] === 5;
+    const tableString = createAsciiTable(1, 5, rollResults);
 
-    const odds = determinePerfectRollOdds(1, 10);
+    const odds = determinePerfectRollOdds(1, 5);
     const xp = determineXp(odds);
 
     const outcome = isPerfectRoll ? 'neutral' : 'died';
@@ -68,6 +68,7 @@ module.exports = {
           'Congratulations! You defeated the king of ghosts and gained another revive attempt!',
       );
 
+      saveData[userId].lastReviveAttemptTime = null;
       saveData[userId].remainingFightAttempts = 0;
     } else {
       await interaction.reply(
