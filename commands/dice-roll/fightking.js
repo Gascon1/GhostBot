@@ -44,6 +44,8 @@ module.exports = {
       return;
     }
 
+    saveData[userId].remainingFightAttempts -= 1;
+
     const rollResults = rollDice(1, 5);
     const isPerfectRoll = rollResults[0] === 5;
     const tableString = createAsciiTable(1, 5, rollResults);
@@ -90,7 +92,6 @@ module.exports = {
       saveData[userId] = {};
     }
 
-    saveData[userId].remainingFightAttempts -= 1;
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2), 'utf8');
   },
 };
