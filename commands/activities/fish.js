@@ -7,7 +7,6 @@ const path = require('path');
 const saveFilePath = path.join(__dirname, '../../save.json');
 
 
-// TODO: Increase success rate based on level
 const fishPool = [
   {
     name: 'Small Fish',
