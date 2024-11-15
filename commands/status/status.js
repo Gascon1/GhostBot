@@ -26,14 +26,14 @@ module.exports = {
 
     if (isDead) {
       await interaction.reply(
-        'Status: Dead :skull:' + '\n' + 
+        'Status: Dead :skull:' + '\n' +
         'Revive attempts: ' + userData.reviveAttempts + '\n' +
-        'Fishing XP: ' + userData.fishingXp + '\n');
+        'Fishing Level: ' + userData.fishingLevel + '\n');
     } else {
       await interaction.reply(
-        'Status: Alive :heart:' + '\n' + 
+        'Status: Alive :heart:' + '\n' +
         'XP: ' + userData.xp + '\n' +
-        'Fishing XP: ' + userData.fishingXp + '\n');
+        'Fishing Level: ' + userData.fishingLevel + '\n');
     }
   },
 };
