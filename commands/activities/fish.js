@@ -7,13 +7,13 @@ const path = require('path');
 const saveFilePath = path.join(__dirname, '../../save.json');
 
 
+// TODO: Increase success rate based on level
 const fishPool = [
   {
     name: 'Small Fish',
     emoji: '🐟',
     xp: 2,
     requiredLevel: 1,
-    minRoll: 1,
     maxRoll: 3,
   },
   {
@@ -21,7 +21,13 @@ const fishPool = [
     emoji: '🐠',
     xp: 5,
     requiredLevel: 1,
-    minRoll: 4,
+    maxRoll: 3,
+  },
+  {
+    name: 'Blowfish',
+    emoji: '🐡',
+    xp: 8,
+    requiredLevel: 3,
     maxRoll: 6,
   },
   {
@@ -29,59 +35,50 @@ const fishPool = [
     emoji: '🪼',
     xp: 10,
     requiredLevel: 5,
-    minRoll: 7,
     maxRoll: 9,
   },
   {
     name: 'Shark',
-    emoji: ':shark:',
+    emoji: '🦈',
     xp: 15,
-    requiredLevel: 10,
-    minRoll: 10,
+    requiredLevel: 7,
     maxRoll: 12,
   },
   {
     name: 'Whale',
-    emoji: ':whale:',
-    xp: 20,
-    requiredLevel: 15,
-    minRoll: 13,
+    emoji: '🐋',
+    xp: 30,
+    requiredLevel: 10,
     maxRoll: 15,
   },
-]
-
-// TODO: Add fish pool
-// TODO: XP scaling formula
-// TODO: Increase success rate based on level
+];
 
 // Parameters
 const _fishingTimer = 3000;
-// Display
-const bars = 20
-const xpFillSymbol = "■"
-const xpEmptySymbol = " "
-
-// Debug
-const fishXp = 15;
+// XP Display
+const bars = 20;
+const xpFillSymbol = "■";
+const xpEmptySymbol = " ";
 
 
 function getExperienceForLevel(level) {
   let points = 0;
   let output = 0;
   for (let lvl = 0; lvl <= level; lvl++) {
-      points += Math.floor(lvl + 300.0 * Math.pow(2.0, lvl / 7.0));
-      if (lvl >= level) {
-          return Math.ceil(output);
-      }
-      output = Math.floor(points / 4)/2;
+    points += Math.floor(lvl + 300.0 * Math.pow(2.0, lvl / 7.0));
+    if (lvl >= level) {
+      return Math.ceil(output);
+    }
+    output = Math.floor(points / 4) / 2;
   }
   return 0;
 }
 
 function renderXpBar(currentFishingXp, currentFishingLevel, xpToLevelUp) {
   const xpBar = Math.round((currentFishingXp / xpToLevelUp) * bars);
-  return `🎣 Fishing Lv${currentFishingLevel}: [2;34m|${xpFillSymbol.repeat(xpBar)}${xpEmptySymbol.repeat(bars - xpBar)}|[0m` + ` ${currentFishingXp}/${xpToLevelUp}`
+  return `🎣 Fishing Lv${currentFishingLevel}: [2;34m|${xpFillSymbol.repeat(xpBar)}${xpEmptySymbol.repeat(bars - xpBar)}|[0m` + ` ${currentFishingXp}/${xpToLevelUp}`;
 }
+
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -92,6 +89,7 @@ module.exports = {
    * @param {import('discord.js').CommandInteraction} interaction - The interaction object.
    */
   async execute(interaction) {
+    // #region Setup
     // Grab user's emoji
     const { member } = interaction;
     const fishingMeeple = Object.values(meepleEmojis).find((meeple) => meeple.userId === member.id);
@@ -104,7 +102,6 @@ module.exports = {
       saveData = {};
     }
 
-    
     // Setup messages
     let oceanText =
     '\n' +
@@ -113,57 +110,51 @@ module.exports = {
     '𓇼 ⋆.˚  𓆝⋆.˚    𓇼 ⋆｡˚ 𓆞' + '\n' +
     '𓆉𓆝𓇼𓆟  𖦹°‧𓆝𓆡𓆜 𓆉𓆝𓇼𓆟' + '\n' +
     '```';
-    let beforeFishingText = '# ' + fishingMeeple.meeple + oceanText;
+    const beforeFishingText = '# ' + fishingMeeple.meeple + oceanText;
+    // #endregion Setup
+
 
     // Sending initial fishing messages
-    // const fishingIntroMessage = await interaction.channel.send(`${member.displayName}` + ' is fishing...\n\n');
     const beforeFishingMessage = await interaction.reply(beforeFishingText);
-    // const beforeFishingMessage = await interaction.channel.send(beforeFishingText);
-    // const oceanMessage = await interaction.channel.send(oceanText);
+
+    // Fishing XP Logic - Setup
+    let currentFishingLevel = saveData[member.id].fishingLevel;
+    let currentFishingXp = saveData[member.id].fishingXp;
+    let xpToLevelUp = getExperienceForLevel(currentFishingLevel);
+    let levelUpText = "";
+    let afterFishingText;
+
+    // Select fish
+    const fishPoolFiltered = fishPool.filter((fish) => fish.requiredLevel <= saveData[member.id].fishingLevel);
+    const fishIndex = Math.floor(Math.random() * fishPoolFiltered.length); // Throws a fit if I do it in the next line
+    const selectedFish = fishPoolFiltered[fishIndex];
+
+    // Calculates odd of catching the fish
+    const rollResults = rollDice(1, selectedFish.maxRoll);
+    const rollValues = Array.from({ length: currentFishingLevel }, (_, i) => i + 1); // Create an array of numbers from 1 to currentFishingLevel
+    const isSuccess = rollResults.some((roll) => rollValues.includes(roll)); // Check if any value in rollResults is in rollValues
 
     // Fishing timer
     await new Promise((resolve) => setTimeout(resolve, _fishingTimer));
 
-    // Calculates odd of catching a fish
-    const rollResults = rollDice(1, 2);
-    const isSuccess = rollResults.includes(1) || rollResults.includes(2);
-    
-    // const afterFishingMessage = isSuccess ? fishingMeeple.meeple + '🐡' : fishingMeeple.meeple;
-    
-    
-    
-    // Fishing XP Logic - Calculate XP bar
-    let currentFishingXp = saveData[member.id].fishingXp;
-    let currentFishingLevel = saveData[member.id].fishingLevel;
-    let xpToLevelUp = getExperienceForLevel(currentFishingLevel);
-    let levelUpText = "";
-    let afterFishingText;
-    
     // If fails, abort early and display final message.
     if (!isSuccess) {
-      // await oceanMessage.edit(
-      //   '```ansi' + '\n' + 
-      //   'Nothing happens...' + '\n' +
-      //   `${renderXpBar(currentFishingXp, currentFishingLevel, xpToLevelUp)}` + '\n' +
-      //   levelUpText + '\n' +
-      //   '```'
-      // );
-      oceanText = 
+      oceanText =
         '\n' +
-        '```ansi' + '\n' + 
+        '```ansi' + '\n' +
         'Nothing happens...' + '\n' +
         `${renderXpBar(currentFishingXp, currentFishingLevel, xpToLevelUp)}` + '\n' +
         levelUpText + '\n' +
         '```';
       afterFishingText = fishingMeeple.meeple + oceanText;
-      // Displays results
+
       await beforeFishingMessage.edit(afterFishingText);
       return;
     }
-    
+
     // If success, add XP
-    currentFishingXp += fishXp;
-    
+    currentFishingXp += selectedFish.xp;
+
     // Check if leveling up
     if (currentFishingXp >= xpToLevelUp) {
       // Level up
@@ -174,21 +165,27 @@ module.exports = {
 
       levelUpText = `🏆 You have leveled up! You are now level ${currentFishingLevel} 🏆`;
       xpToLevelUp = getExperienceForLevel(currentFishingLevel);
+
+      // Check if unlocked a new fish
+      const unlockedFish = fishPool.find((fish) => fish.requiredLevel === currentFishingLevel);
+      if (unlockedFish) {
+        levelUpText += `\n\n🆕 You can now fish: ${unlockedFish.name} ${unlockedFish.emoji}`;
+      }
     }
-    
+
     // Display success final message
-    const fishingResultsText = 
+    const fishingResultsText =
       '\n' +
-      '```ansi' + '\n' + 
-      `You have caught a fish! +${fishXp} Fishing XP` + '\n' +
+      '```ansi' + '\n' +
+      `You have caught a ${selectedFish.name}${selectedFish.emoji}! +${selectedFish.xp} Fishing XP` + '\n' +
       `${renderXpBar(currentFishingXp, currentFishingLevel, xpToLevelUp)}` + '\n' +
       levelUpText + '\n' +
       '```';
 
-    afterFishingText = '# ' + fishingMeeple.meeple + '🐠' + fishingResultsText;
+    afterFishingText = '# ' + fishingMeeple.meeple + selectedFish.emoji + fishingResultsText;
     await beforeFishingMessage.edit(afterFishingText);
-    
-    // Update Fishing XP & Level to the save.json file
+
+    // Save new Fishing XP & Level to save.json file
     saveData[member.id].fishingXp = currentFishingXp;
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2));
   },
