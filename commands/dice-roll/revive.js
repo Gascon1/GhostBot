@@ -57,9 +57,15 @@ module.exports = {
 
     const initialMessage = await interaction.channel.send(`<@${interaction.user.id}>'s fate is being discussed...`);
 
-    await interaction.channel.send(revivalCouncil);
+    await interaction.channel.send({
+      content: revivalCouncil,
+      allowedMentions: { parse: [] },
+    });
 
-    const coinMessage = await interaction.channel.send(displayedCoins.join(' '));
+    const coinMessage = await interaction.channel.send({
+      content: displayedCoins.join(' '),
+      allowedMentions: { parse: [] },
+    });
 
     async function updateCoins() {
       for (let index = 0; index <= 3; index++) {
