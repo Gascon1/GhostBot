@@ -25,9 +25,15 @@ module.exports = {
     const isDead = interaction.member.roles.cache.some((role) => role.name === 'Dead');
 
     if (isDead) {
-      await interaction.reply('Status: Dead :skull:' + '\n' + 'Revive attempts: ' + userData.reviveAttempts);
+      await interaction.reply(
+        'Status: Dead :skull:' + '\n' + 
+        'Revive attempts: ' + userData.reviveAttempts + '\n' +
+        'Fishing XP: ' + userData.fishingXp + '\n');
     } else {
-      await interaction.reply('Status: Alive :heart:' + '\n' + 'XP: ' + userData.xp);
+      await interaction.reply(
+        'Status: Alive :heart:' + '\n' + 
+        'XP: ' + userData.xp + '\n' +
+        'Fishing XP: ' + userData.fishingXp + '\n');
     }
   },
 };
