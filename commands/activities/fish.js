@@ -86,7 +86,6 @@ module.exports = {
     // Displays results
     await fishingIntroMessage.edit(`${member.displayName} is done fishing!`);
     await beforeFishingMessage.edit(afterFishingMessage);
-    await oceanMessage.edit('\n' + outcome);
 
     // If fails, abort early.
     if (!isSuccess) {
