@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { rollDice } = require('../../lib/dice-roll');
+const { targetRoll, equalTo } = require('../../lib/target-roll');
 const { createAsciiTable } = require('../../lib/create-ascii-table');
 const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
 const { determineAsciiArt } = require('../../lib/determine-ascii-art');
@@ -22,20 +22,18 @@ module.exports = {
    */
   async execute(interaction) {
     const { member } = interaction;
-    const rolls = interaction.options.getInteger('rolls');
-    const sides = interaction.options.getInteger('sides');
+    const numberOfDice = interaction.options.getInteger('rolls');
+    const numberOfSides = interaction.options.getInteger('sides');
     const deadRole = interaction.guild.roles.cache.find((role) => role.name === 'Dead');
 
-    const rollResults = rollDice(rolls, sides);
-    const perfectRoll = sides;
-    const isPerfectRoll = rollResults.every((roll) => roll === perfectRoll);
+    const roll = targetRoll(numberOfDice, numberOfSides, numberOfSides, equalTo, true);
 
-    const odds = determinePerfectRollOdds(rolls, sides);
+    const odds = determinePerfectRollOdds(numberOfDice, numberOfSides);
     const xp = determineXp(odds);
 
-    const tableString = createAsciiTable(rolls, sides, rollResults);
+    const tableString = createAsciiTable(numberOfDice, numberOfSides, roll.values);
 
-    const outcome = isPerfectRoll ? 'neutral' : 'died';
+    const outcome = roll.conditionMet ? 'neutral' : 'died';
     const asciiMessage = determineAsciiArt(outcome, member, odds, deadRole, xp);
 
     await interaction.reply(

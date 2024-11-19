@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { rollDice } = require('../../lib/dice-roll');
+const { targetRoll, equalTo } = require('../../lib/target-roll');
 const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
 const { meepleEmojis, oopsCoin } = require('../../lib/meeple-data');
 
@@ -47,7 +47,7 @@ module.exports = {
     saveData[userId].lastReviveAttemptTime = currentAttemptTime;
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2));
 
-    const rollResults = rollDice(4, 2);
+    const roll = targetRoll(4, 2, 2, equalTo, true);
     const colorOrder = ['red', 'yellow', 'green', 'blue'];
 
     const displayedCoins = colorOrder.map((color) => meepleEmojis[color].coinFlipping);
@@ -69,7 +69,7 @@ module.exports = {
 
     async function updateCoins() {
       for (let index = 0; index <= 3; index++) {
-        displayedCoins[index] = rollResults[index] === 1 ? oopsCoin : meepleEmojis[colorOrder[index]].coinStatic;
+        displayedCoins[index] = roll.values[index] === 1 ? oopsCoin : meepleEmojis[colorOrder[index]].coinStatic;
         await coinMessage.edit(displayedCoins.join(' '));
 
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -83,7 +83,7 @@ module.exports = {
     const { member } = interaction;
     const deadRole = interaction.guild.roles.cache.find((role) => role.name === 'Dead');
 
-    const outcome = rollResults.every((roll) => roll === 2) ? 'revived' : 'neutral';
+    const outcome = roll.conditionMet ? 'revived' : 'neutral';
     await updateUserRoleAndNickname(member, outcome, deadRole);
   },
 };

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { rollDice } = require('../../lib/dice-roll');
+const { targetRoll, equalTo } = require('../../lib/target-roll');
 const { createAsciiTable } = require('../../lib/create-ascii-table');
 const { determineAsciiArt } = require('../../lib/determine-ascii-art');
 const { determinePerfectRollOdds } = require('../../lib/determine-odds');
@@ -46,17 +46,16 @@ module.exports = {
 
     saveData[userId].remainingFightAttempts -= 1;
 
-    const rollResults = rollDice(1, 5);
-    const isPerfectRoll = rollResults[0] === 5;
-    const tableString = createAsciiTable(1, 5, rollResults);
+    const roll = targetRoll(1, 5, 5, equalTo);
+    const tableString = createAsciiTable(1, 5, roll.values);
 
     const odds = determinePerfectRollOdds(1, 5);
     const xp = determineXp(odds);
 
-    const outcome = isPerfectRoll ? 'neutral' : 'died';
+    const outcome = roll.conditionMet ? 'neutral' : 'died';
     const asciiMessage = determineAsciiArt(outcome, member, odds, deadRole, xp, true);
 
-    if (isPerfectRoll) {
+    if (roll.conditionMet) {
       await interaction.reply(
         asciiMessage.flavor +
           '\n' +
