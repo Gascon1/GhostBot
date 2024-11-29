@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { targetRoll, equalTo } = require('../../lib/target-roll');
 const { updateUserRoleAndNickname } = require('../../lib/update-user-role-and-nickname');
 const { meepleEmojis, oopsCoin } = require('../../lib/meeple-data');
+const { shuffle } = require('../../lib/shuffle');
 
 const fs = require('fs');
 const path = require('path');
@@ -49,6 +50,21 @@ module.exports = {
 
     const roll = targetRoll(4, 2, 2, equalTo, true);
     const colorOrder = ['red', 'yellow', 'green', 'blue'];
+    // If the rolls array looked like [2, 2, 1, 2], the output of this operation would be like [1, 2, -3, 4]
+    const rollsSignedAdjustedIndexes = roll.values.map((value, index) => {
+      // Used to be able to differentiate the first roll. Otherwise a 0 cannot be told if it was successful or not
+      const adjustedIndex = index + 1;
+      if (value === 2) {
+        return adjustedIndex;
+      }
+      return adjustedIndex * -1;
+    });
+
+    shuffle(rollsSignedAdjustedIndexes);
+
+    // Reverses the adjustment made above to extract the real index
+    const successfullRollsIndexes = rollsSignedAdjustedIndexes.filter((value) => value > 0).map((value) => value - 1);
+    const missedRollsIndexes = rollsSignedAdjustedIndexes.filter((value) => value < 0).map((value) => (value + 1) * -1);
 
     const displayedCoins = colorOrder.map((color) => meepleEmojis[color].coinFlipping);
 
@@ -69,7 +85,12 @@ module.exports = {
 
     async function updateCoins() {
       for (let index = 0; index <= 3; index++) {
-        displayedCoins[index] = roll.values[index] === 1 ? oopsCoin : meepleEmojis[colorOrder[index]].coinStatic;
+        if (index + 1 <= successfullRollsIndexes.length) {
+          displayedCoins[successfullRollsIndexes[index]] =
+            meepleEmojis[colorOrder[successfullRollsIndexes[index]]].coinStatic;
+        } else {
+          displayedCoins[missedRollsIndexes[index - successfullRollsIndexes.length]] = oopsCoin;
+        }
         await coinMessage.edit(displayedCoins.join(' '));
 
         await new Promise((resolve) => setTimeout(resolve, 1000));

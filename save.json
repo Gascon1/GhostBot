@@ -9,11 +9,11 @@
     "fishingXp": 47
   },
   "106555295186051072": {
-    "reviveAttempts": 50,
+    "reviveAttempts": 2,
     "xp": 0,
-    "allTimeHighXp": 105,
-    "lastReviveAttemptTime": "22:00",
-    "remainingFightAttempts": 3,
+    "allTimeHighXp": 252,
+    "lastReviveAttemptTime": "12:00",
+    "remainingFightAttempts": 1,
     "fishingLevel": 3,
     "fishingXp": 29
   },
@@ -21,8 +21,8 @@
     "reviveAttempts": 1,
     "xp": 0,
     "allTimeHighXp": 212,
-    "lastReviveAttemptTime": "11:00",
-    "remainingFightAttempts": 3,
+    "lastReviveAttemptTime": "12:00",
+    "remainingFightAttempts": 1,
     "fishingLevel": 1,
     "fishingXp": 5
   },
