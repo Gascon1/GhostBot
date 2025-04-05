@@ -30,6 +30,28 @@ for (const folder of commandFolders) {
   }
 }
 
+// Handle autocomplete interactions
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.isAutocomplete()) {
+    const command = interaction.client.commands.get(interaction.commandName);
+
+    if (!command) {
+      console.error(`No command matching ${interaction.commandName} was found.`);
+      return;
+    }
+
+    try {
+      if ('autocomplete' in command) {
+        await command.autocomplete(interaction);
+      }
+    } catch (error) {
+      console.error(`Error handling autocomplete for ${interaction.commandName}`);
+      console.error(error);
+    }
+    return;
+  }
+});
+
 client.on(Events.InteractionCreate, async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 

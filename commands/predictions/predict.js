@@ -19,15 +19,27 @@ module.exports = {
         .setAutocomplete(true),
     ),
   async autocomplete(interaction) {
+    console.log('Autocomplete triggered for predict command');
     const focusedOption = interaction.options.getFocused(true);
     const focusedValue = focusedOption.value;
+    console.log(`Focused option: ${focusedOption.name}, Value: ${focusedValue}`);
 
     // Read the save file
     let saveData;
     try {
       saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
-    } catch {
+      console.log('Save data loaded successfully');
+
+      // Log the predictions array
+      if (!saveData.predictions || saveData.predictions.length === 0) {
+        console.log('No predictions found in save data');
+      } else {
+        console.log(`Found ${saveData.predictions.length} predictions in save data`);
+      }
+    } catch (error) {
+      console.error('Error loading save data:', error);
       saveData = {};
+      await interaction.respond([]);
       return;
     }
 
@@ -36,27 +48,32 @@ module.exports = {
     if (focusedOption.name === 'prediction') {
       // Only show non-revealed predictions for voting
       const activePredictions = predictions.filter((pred) => !pred.isRevealed);
+      console.log(`Found ${activePredictions.length} active predictions`);
 
       let filtered = activePredictions;
 
       if (focusedValue) {
         const lowercasedValue = focusedValue.toLowerCase();
         filtered = activePredictions.filter((pred) => pred.title.toLowerCase().includes(lowercasedValue));
+        console.log(`Filtered to ${filtered.length} predictions matching "${focusedValue}"`);
       }
 
-      await interaction.respond(
-        filtered
-          .map((pred) => ({
-            name: pred.title,
-            value: pred.id,
-          }))
-          .slice(0, 25), // Discord only allows 25 choices
-      );
+      const choices = filtered
+        .map((pred) => ({
+          name: pred.title,
+          value: pred.id,
+        }))
+        .slice(0, 25); // Discord only allows 25 choices
+
+      console.log('Responding with prediction choices:', choices);
+      await interaction.respond(choices);
     } else if (focusedOption.name === 'option') {
       // For the option selection, show the options of the selected prediction
       const predictionId = interaction.options.getString('prediction');
+      console.log(`Getting options for prediction ID: ${predictionId}`);
 
       if (!predictionId) {
+        console.log('No prediction ID provided');
         await interaction.respond([]);
         return;
       }
@@ -64,26 +81,30 @@ module.exports = {
       const prediction = predictions.find((pred) => pred.id === predictionId);
 
       if (!prediction) {
+        console.log('Prediction not found');
         await interaction.respond([]);
         return;
       }
 
+      console.log(`Found prediction: ${prediction.title} with ${prediction.options.length} options`);
       const options = prediction.options;
       let filtered = options;
 
       if (focusedValue) {
         const lowercasedValue = focusedValue.toLowerCase();
         filtered = options.filter((option) => option.toLowerCase().includes(lowercasedValue));
+        console.log(`Filtered to ${filtered.length} options matching "${focusedValue}"`);
       }
 
-      await interaction.respond(
-        filtered
-          .map((option, index) => ({
-            name: `${index + 1}. ${option}`,
-            value: `${index}`, // Store as string for the option index
-          }))
-          .slice(0, 25),
-      );
+      const choices = filtered
+        .map((option, index) => ({
+          name: `${index + 1}. ${option}`,
+          value: `${index}`, // Store as string for the option index
+        }))
+        .slice(0, 25);
+
+      console.log('Responding with option choices:', choices);
+      await interaction.respond(choices);
     }
   },
   async execute(interaction) {
