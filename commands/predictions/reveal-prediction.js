@@ -19,25 +19,14 @@ module.exports = {
         .setAutocomplete(true),
     ),
   async autocomplete(interaction) {
-    console.log('Autocomplete triggered for reveal-prediction command');
     const focusedOption = interaction.options.getFocused(true);
     const focusedValue = focusedOption.value;
-    console.log(`Focused option: ${focusedOption.name}, Value: ${focusedValue}`);
 
     // Read the save file
     let saveData;
     try {
       saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
-      console.log('Save data loaded successfully');
-
-      // Log the predictions array
-      if (!saveData.predictions || saveData.predictions.length === 0) {
-        console.log('No predictions found in save data');
-      } else {
-        console.log(`Found ${saveData.predictions.length} predictions in save data`);
-      }
-    } catch (error) {
-      console.error('Error loading save data:', error);
+    } catch {
       saveData = {};
       await interaction.respond([]);
       return;
@@ -51,14 +40,12 @@ module.exports = {
         ...predictions.filter((pred) => !pred.isRevealed),
         ...predictions.filter((pred) => pred.isRevealed),
       ];
-      console.log(`Ordered predictions: ${orderedPredictions.length} total, with non-revealed first`);
 
       let filtered = orderedPredictions;
 
       if (focusedValue) {
         const lowercasedValue = focusedValue.toLowerCase();
         filtered = orderedPredictions.filter((pred) => pred.title.toLowerCase().includes(lowercasedValue));
-        console.log(`Filtered to ${filtered.length} predictions matching "${focusedValue}"`);
       }
 
       const choices = filtered
@@ -68,15 +55,12 @@ module.exports = {
         }))
         .slice(0, 25); // Discord only allows 25 choices
 
-      console.log('Responding with prediction choices:', choices);
       await interaction.respond(choices);
     } else if (focusedOption.name === 'winners') {
       // For selecting winners, show the options of the selected prediction with checkboxes
       const predictionId = interaction.options.getString('prediction');
-      console.log(`Getting winner options for prediction ID: ${predictionId}`);
 
       if (!predictionId) {
-        console.log('No prediction ID provided');
         await interaction.respond([]);
         return;
       }
@@ -84,16 +68,12 @@ module.exports = {
       const prediction = predictions.find((pred) => pred.id === predictionId);
 
       if (!prediction) {
-        console.log('Prediction not found');
         await interaction.respond([]);
         return;
       }
 
-      console.log(`Found prediction: ${prediction.title} with ${prediction.options.length} options`);
-
       // If already revealed, show a message
       if (prediction.isRevealed) {
-        console.log('Prediction is already revealed');
         await interaction.respond([
           {
             name: 'This prediction has already been revealed.',
@@ -105,21 +85,17 @@ module.exports = {
 
       // Check for existing input and handle accordingly
       if (focusedValue) {
-        console.log(`Processing focused value: ${focusedValue}`);
         // Parse the comma-separated list of selected indices
         const selectedValues = focusedValue.split(',').map((v) => v.trim());
-        console.log(`Parsed selected values: ${JSON.stringify(selectedValues)}`);
 
         // Convert last one (being edited) to lowercase for case-insensitive search
         if (selectedValues.length > 0) {
           const lastValue = selectedValues[selectedValues.length - 1].toLowerCase();
-          console.log(`Last value being edited: "${lastValue}"`);
 
           // Filter options based on the current search term
           const matchingOptions = prediction.options
             .map((option, index) => ({ option, index }))
             .filter(({ option }) => option.toLowerCase().includes(lastValue));
-          console.log(`Found ${matchingOptions.length} matching options`);
 
           const choices = matchingOptions
             .map(({ option, index }) => ({
@@ -129,7 +105,6 @@ module.exports = {
             }))
             .slice(0, 25);
 
-          console.log('Responding with filtered winner choices:', choices);
           await interaction.respond(choices);
           return;
         }
@@ -143,7 +118,6 @@ module.exports = {
         }))
         .slice(0, 25);
 
-      console.log('Responding with all winner choices:', choices);
       await interaction.respond(choices);
     }
   },
