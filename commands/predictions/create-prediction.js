@@ -21,6 +21,12 @@ module.exports = {
     )
     .addStringOption((option) =>
       option.setName('option5').setDescription('Fifth option to vote for (optional)').setRequired(false),
+    )
+    .addStringOption((option) =>
+      option
+        .setName('deadline')
+        .setDescription('Deadline for voting (format: YYYY-MM-DD HH:MM, e.g., 2023-12-31 23:59)')
+        .setRequired(false),
     ),
   async execute(interaction) {
     const userId = interaction.user.id;
@@ -30,6 +36,33 @@ module.exports = {
     const option3 = interaction.options.getString('option3');
     const option4 = interaction.options.getString('option4');
     const option5 = interaction.options.getString('option5');
+    const deadlineString = interaction.options.getString('deadline');
+
+    // Process deadline if provided
+    let deadline = null;
+    if (deadlineString) {
+      const parsedDeadline = new Date(deadlineString);
+
+      // Check if it's a valid future date
+      if (isNaN(parsedDeadline.getTime())) {
+        await interaction.reply({
+          content: 'Invalid deadline format. Please use YYYY-MM-DD HH:MM format (e.g., 2023-12-31 23:59).',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      const now = new Date();
+      if (parsedDeadline <= now) {
+        await interaction.reply({
+          content: 'Deadline must be in the future.',
+          ephemeral: true,
+        });
+        return;
+      }
+
+      deadline = parsedDeadline.toISOString();
+    }
 
     // Read the save file
     let saveData;
@@ -57,6 +90,7 @@ module.exports = {
       options,
       createdBy: userId,
       createdAt: new Date().toISOString(),
+      deadline,
       votes: {},
       isRevealed: false,
       winners: [],
@@ -71,9 +105,14 @@ module.exports = {
     // Generate the options display
     const optionsDisplay = options.map((option, index) => `${index + 1}. ${option}`).join('\n');
 
+    // Format deadline display if it exists
+    const deadlineDisplay = deadline
+      ? `\n\n**Deadline:** ${new Date(deadline).toLocaleString()}\nResults will be automatically revealed after the deadline.`
+      : '';
+
     // Reply with confirmation
     await interaction.reply({
-      content: `# 🔮 Prediction Created: ${title}\n\n**Options:**\n${optionsDisplay}\n\nUsers can now vote using \`/predict\` command! The results will be hidden until revealed.`,
+      content: `# 🔮 Prediction Created: ${title}\n\n**Options:**\n${optionsDisplay}${deadlineDisplay}\n\nUsers can now vote using \`/predict\` command! The results will be hidden until revealed.`,
       ephemeral: false,
     });
   },

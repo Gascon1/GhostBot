@@ -65,6 +65,33 @@ module.exports = {
       listDisplay += `## ${index + 1}. ${pred.title}\n`;
       listDisplay += `**ID:** ${pred.id}\n`;
       listDisplay += `**Created:** ${dateString}\n`;
+
+      // Add deadline information if it exists
+      if (pred.deadline) {
+        const deadlineDate = new Date(pred.deadline);
+        const deadlineString = deadlineDate.toLocaleString();
+        const now = new Date();
+        const timeRemaining = deadlineDate - now;
+
+        if (timeRemaining > 0 && !pred.isRevealed) {
+          // Calculate days, hours, minutes remaining
+          const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+
+          const timeRemainingString =
+            days > 0
+              ? `${days}d ${hours}h ${minutes}m remaining`
+              : hours > 0
+                ? `${hours}h ${minutes}m remaining`
+                : `${minutes}m remaining`;
+
+          listDisplay += `**Deadline:** ${deadlineString} (${timeRemainingString})\n`;
+        } else {
+          listDisplay += `**Deadline:** ${deadlineString} (Expired)\n`;
+        }
+      }
+
       listDisplay += `**Votes:** ${voteCount}\n`;
 
       // For active predictions, show the voting options
