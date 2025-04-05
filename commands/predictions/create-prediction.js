@@ -18,6 +18,9 @@ module.exports = {
     )
     .addStringOption((option) =>
       option.setName('option4').setDescription('Fourth option to vote for (optional)').setRequired(false),
+    )
+    .addStringOption((option) =>
+      option.setName('option5').setDescription('Fifth option to vote for (optional)').setRequired(false),
     ),
   async execute(interaction) {
     const userId = interaction.user.id;
