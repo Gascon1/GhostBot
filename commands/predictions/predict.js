@@ -189,7 +189,7 @@ module.exports = {
 
     // Then, send a public message announcing someone voted, but without revealing their choice
     await interaction.followUp({
-      content: `🗳️ **${interaction.user.username}** has ${isChangedVote ? 'changed their vote' : 'voted'} on prediction: **${prediction.title}**\n\n${Object.keys(prediction.votes).length} vote(s) recorded so far!`,
+      content: `🗳️ ${interaction.user} has ${isChangedVote ? 'changed their vote' : 'voted'} on prediction: **${prediction.title}**\n\n${Object.keys(prediction.votes).length} vote(s) recorded so far!`,
       ephemeral: false, // Public message
     });
   },
