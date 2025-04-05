@@ -169,6 +169,9 @@ module.exports = {
       return;
     }
 
+    // Check if this is a changed vote or a new vote
+    const isChangedVote = userId in prediction.votes;
+
     // Record the vote
     prediction.votes[userId] = optionIndex; // Already 0-indexed
 
@@ -178,10 +181,16 @@ module.exports = {
     // Save the updated data
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2));
 
-    // Reply to the user confirming their vote
+    // First, reply privately to the user confirming their vote
     await interaction.reply({
       content: `Your vote for "${prediction.title}" has been recorded: ${prediction.options[optionIndex]}\n\nThe results will be hidden until revealed.`,
       ephemeral: true, // Making it ephemeral so only the user who voted can see their choice
+    });
+
+    // Then, send a public message announcing someone voted, but without revealing their choice
+    await interaction.followUp({
+      content: `🗳️ **${interaction.user.username}** has ${isChangedVote ? 'changed their vote' : 'voted'} on prediction: **${prediction.title}**\n\n${Object.keys(prediction.votes).length} vote(s) recorded so far!`,
+      ephemeral: false, // Public message
     });
   },
 };
