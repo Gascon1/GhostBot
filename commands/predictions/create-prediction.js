@@ -29,6 +29,7 @@ module.exports = {
     const option2 = interaction.options.getString('option2');
     const option3 = interaction.options.getString('option3');
     const option4 = interaction.options.getString('option4');
+    const option5 = interaction.options.getString('option5');
 
     // Read the save file
     let saveData;
@@ -44,7 +45,7 @@ module.exports = {
     }
 
     // Create options array, filtering out undefined options
-    const options = [option1, option2, option3, option4].filter(Boolean);
+    const options = [option1, option2, option3, option4, option5].filter(Boolean);
 
     // Create a unique ID for the prediction
     const predictionId = Date.now().toString();
