@@ -9,20 +9,20 @@ module.exports = {
     .setName('reveal-prediction')
     .setDescription('Reveal the results of a prediction')
     .addStringOption((option) =>
-      option
-        .setName('prediction_id')
-        .setDescription('ID of the prediction to reveal')
-        .setRequired(true)
-        .setAutocomplete(true),
+      option.setName('prediction').setDescription('The prediction to reveal').setRequired(true).setAutocomplete(true),
     )
     .addStringOption((option) =>
       option
-        .setName('winner')
-        .setDescription('The winning option number(s) separated by commas (e.g., "1,3" for options 1 and 3)')
-        .setRequired(false),
+        .setName('winners')
+        .setDescription('The winning option(s) separated by commas (e.g., "1,3" for options 1 and 3)')
+        .setRequired(false)
+        .setAutocomplete(true),
     ),
   async autocomplete(interaction) {
-    // Read the save file to get predictions
+    const focusedOption = interaction.options.getFocused(true);
+    const focusedValue = focusedOption.value;
+
+    // Read the save file
     let saveData;
     try {
       saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
@@ -32,30 +32,97 @@ module.exports = {
     }
 
     const predictions = saveData.predictions || [];
-    // Show both revealed and non-revealed predictions in autocomplete
 
-    const focusedValue = interaction.options.getFocused();
-    let filtered = predictions;
+    if (focusedOption.name === 'prediction') {
+      // For revealing, prioritize non-revealed predictions but show all
+      const orderedPredictions = [
+        ...predictions.filter((pred) => !pred.isRevealed),
+        ...predictions.filter((pred) => pred.isRevealed),
+      ];
 
-    if (focusedValue) {
-      const lowercasedValue = focusedValue.toLowerCase();
-      filtered = predictions.filter(
-        (pred) => pred.title.toLowerCase().includes(lowercasedValue) || pred.id.includes(lowercasedValue),
+      let filtered = orderedPredictions;
+
+      if (focusedValue) {
+        const lowercasedValue = focusedValue.toLowerCase();
+        filtered = orderedPredictions.filter((pred) => pred.title.toLowerCase().includes(lowercasedValue));
+      }
+
+      await interaction.respond(
+        filtered
+          .map((pred) => ({
+            name: `${pred.title}${pred.isRevealed ? ' (Already Revealed)' : ''}`,
+            value: pred.id,
+          }))
+          .slice(0, 25), // Discord only allows 25 choices
+      );
+    } else if (focusedOption.name === 'winners') {
+      // For selecting winners, show the options of the selected prediction with checkboxes
+      const predictionId = interaction.options.getString('prediction');
+
+      if (!predictionId) {
+        await interaction.respond([]);
+        return;
+      }
+
+      const prediction = predictions.find((pred) => pred.id === predictionId);
+
+      if (!prediction) {
+        await interaction.respond([]);
+        return;
+      }
+
+      // If already revealed, show a message
+      if (prediction.isRevealed) {
+        await interaction.respond([
+          {
+            name: 'This prediction has already been revealed.',
+            value: 'already_revealed',
+          },
+        ]);
+        return;
+      }
+
+      // Check for existing input and handle accordingly
+      if (focusedValue) {
+        // Parse the comma-separated list of selected indices
+        const selectedValues = focusedValue.split(',').map((v) => v.trim());
+
+        // Convert last one (being edited) to lowercase for case-insensitive search
+        if (selectedValues.length > 0) {
+          const lastValue = selectedValues[selectedValues.length - 1].toLowerCase();
+
+          // Filter options based on the current search term
+          const matchingOptions = prediction.options
+            .map((option, index) => ({ option, index }))
+            .filter(({ option }) => option.toLowerCase().includes(lastValue));
+
+          await interaction.respond(
+            matchingOptions
+              .map(({ option, index }) => ({
+                name: `${index + 1}. ${option}`,
+                value:
+                  selectedValues.length > 1 ? `${selectedValues.slice(0, -1).join(',')},${index + 1}` : `${index + 1}`,
+              }))
+              .slice(0, 25),
+          );
+          return;
+        }
+      }
+
+      // If no filtering, show all options
+      await interaction.respond(
+        prediction.options
+          .map((option, index) => ({
+            name: `${index + 1}. ${option}`,
+            value: `${index + 1}`,
+          }))
+          .slice(0, 25),
       );
     }
-
-    await interaction.respond(
-      filtered
-        .map((pred) => ({
-          name: `${pred.title} ${pred.isRevealed ? '(Already Revealed)' : ''} (ID: ${pred.id})`,
-          value: pred.id,
-        }))
-        .slice(0, 25), // Discord only allows 25 choices
-    );
   },
   async execute(interaction) {
-    const predictionId = interaction.options.getString('prediction_id');
-    const winnerInput = interaction.options.getString('winner');
+    const predictionId = interaction.options.getString('prediction');
+    const winnersInput = interaction.options.getString('winners');
 
     // Read the save file
     let saveData;
@@ -102,8 +169,8 @@ module.exports = {
     prediction.winners = [];
 
     // Process winners if specified
-    if (winnerInput) {
-      const winnerNumbers = winnerInput.split(',').map((num) => parseInt(num.trim()));
+    if (winnersInput) {
+      const winnerNumbers = winnersInput.split(',').map((num) => parseInt(num.trim()));
       const validWinnerNumbers = winnerNumbers.filter(
         (num) => !isNaN(num) && num >= 1 && num <= prediction.options.length,
       );

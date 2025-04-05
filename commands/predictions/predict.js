@@ -9,22 +9,20 @@ module.exports = {
     .setName('predict')
     .setDescription('Vote on an active prediction')
     .addStringOption((option) =>
+      option.setName('prediction').setDescription('The prediction to vote on').setRequired(true).setAutocomplete(true),
+    )
+    .addStringOption((option) =>
       option
-        .setName('prediction_id')
-        .setDescription('ID of the prediction to vote on')
+        .setName('option')
+        .setDescription('The option you want to vote for')
         .setRequired(true)
         .setAutocomplete(true),
-    )
-    .addIntegerOption((option) =>
-      option
-        .setName('option_number')
-        .setDescription('The option number you want to vote for')
-        .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(4),
     ),
   async autocomplete(interaction) {
-    // Read the save file to get active predictions
+    const focusedOption = interaction.options.getFocused(true);
+    const focusedValue = focusedOption.value;
+
+    // Read the save file
     let saveData;
     try {
       saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
@@ -34,31 +32,74 @@ module.exports = {
     }
 
     const predictions = saveData.predictions || [];
-    const activePredictions = predictions.filter((pred) => !pred.isRevealed);
 
-    const focusedValue = interaction.options.getFocused();
-    let filtered = activePredictions;
+    if (focusedOption.name === 'prediction') {
+      // Only show non-revealed predictions for voting
+      const activePredictions = predictions.filter((pred) => !pred.isRevealed);
 
-    if (focusedValue) {
-      const lowercasedValue = focusedValue.toLowerCase();
-      filtered = activePredictions.filter(
-        (pred) => pred.title.toLowerCase().includes(lowercasedValue) || pred.id.includes(lowercasedValue),
+      let filtered = activePredictions;
+
+      if (focusedValue) {
+        const lowercasedValue = focusedValue.toLowerCase();
+        filtered = activePredictions.filter((pred) => pred.title.toLowerCase().includes(lowercasedValue));
+      }
+
+      await interaction.respond(
+        filtered
+          .map((pred) => ({
+            name: pred.title,
+            value: pred.id,
+          }))
+          .slice(0, 25), // Discord only allows 25 choices
+      );
+    } else if (focusedOption.name === 'option') {
+      // For the option selection, show the options of the selected prediction
+      const predictionId = interaction.options.getString('prediction');
+
+      if (!predictionId) {
+        await interaction.respond([]);
+        return;
+      }
+
+      const prediction = predictions.find((pred) => pred.id === predictionId);
+
+      if (!prediction) {
+        await interaction.respond([]);
+        return;
+      }
+
+      const options = prediction.options;
+      let filtered = options;
+
+      if (focusedValue) {
+        const lowercasedValue = focusedValue.toLowerCase();
+        filtered = options.filter((option) => option.toLowerCase().includes(lowercasedValue));
+      }
+
+      await interaction.respond(
+        filtered
+          .map((option, index) => ({
+            name: `${index + 1}. ${option}`,
+            value: `${index}`, // Store as string for the option index
+          }))
+          .slice(0, 25),
       );
     }
-
-    await interaction.respond(
-      filtered
-        .map((pred) => ({
-          name: `${pred.title} (ID: ${pred.id})`,
-          value: pred.id,
-        }))
-        .slice(0, 25), // Discord only allows 25 choices
-    );
   },
   async execute(interaction) {
     const userId = interaction.user.id;
-    const predictionId = interaction.options.getString('prediction_id');
-    const optionNumber = interaction.options.getInteger('option_number');
+    const predictionId = interaction.options.getString('prediction');
+    const optionIndexStr = interaction.options.getString('option');
+
+    if (!optionIndexStr) {
+      await interaction.reply({
+        content: 'Invalid option selected.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    const optionIndex = parseInt(optionIndexStr);
 
     // Read the save file
     let saveData;
@@ -99,16 +140,16 @@ module.exports = {
     }
 
     // Check if option is valid
-    if (optionNumber > prediction.options.length) {
+    if (optionIndex < 0 || optionIndex >= prediction.options.length) {
       await interaction.reply({
-        content: `Invalid option. This prediction only has ${prediction.options.length} options.`,
+        content: 'Invalid option selected.',
         ephemeral: true,
       });
       return;
     }
 
     // Record the vote
-    prediction.votes[userId] = optionNumber - 1; // Store 0-indexed
+    prediction.votes[userId] = optionIndex; // Already 0-indexed
 
     // Update the prediction in the save data
     saveData.predictions[predictionIndex] = prediction;
@@ -118,7 +159,7 @@ module.exports = {
 
     // Reply to the user confirming their vote
     await interaction.reply({
-      content: `Your vote for "${prediction.title}" has been recorded: ${prediction.options[optionNumber - 1]}\n\nThe results will be hidden until revealed.`,
+      content: `Your vote for "${prediction.title}" has been recorded: ${prediction.options[optionIndex]}\n\nThe results will be hidden until revealed.`,
       ephemeral: true, // Making it ephemeral so only the user who voted can see their choice
     });
   },
