@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
+const { generateResultsDisplay } = require('../../jobs/reveal-expired-predictions');
 
 const saveFilePath = path.join(__dirname, '../../save.json');
 
@@ -181,42 +182,55 @@ module.exports = {
       }
     }
 
-    // Count votes for each option
-    const voteCount = {};
-    prediction.options.forEach((_, index) => {
-      voteCount[index] = 0;
-    });
-
-    // Count the votes
-    Object.values(prediction.votes).forEach((optionIndex) => {
-      if (voteCount[optionIndex] !== undefined) {
-        voteCount[optionIndex]++;
-      }
-    });
-
     // Update the prediction in the save data
     saveData.predictions[predictionIndex] = prediction;
 
     // Save the updated data
     fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2));
 
-    // Generate the results display
-    const resultsDisplay = prediction.options
-      .map((option, index) => {
-        const count = voteCount[index] || 0;
-        const isWinner = prediction.winners.includes(index);
-        const winnerText = isWinner ? ' 🏆 WINNER' : '';
-        return `${index + 1}. ${option}: ${count} vote(s)${winnerText}`;
-      })
-      .join('\n');
+    // First, send a temporary response while we generate the detailed results (which may take time)
+    await interaction.reply({ content: 'Generating results...', ephemeral: true });
 
-    // Get total votes
-    const totalVotes = Object.keys(prediction.votes).length;
+    try {
+      // Get the enhanced results with voter information
+      const { resultsDisplay, totalVotes, correctPredictorsSummary } = await generateResultsDisplay(
+        prediction,
+        interaction.guild,
+      );
 
-    // Reply with the results
-    await interaction.reply({
-      content: `# 🔮 Prediction Results: ${prediction.title}\n\n${resultsDisplay}\n\n*Total Votes: ${totalVotes}*`,
-      ephemeral: false,
-    });
+      // Send the final reveal message with detailed results
+      await interaction.followUp({
+        content: `# 🔮 Prediction Results: ${prediction.title}\n\n${resultsDisplay}\n\n*Total Votes: ${totalVotes}*${correctPredictorsSummary}`,
+        ephemeral: false,
+      });
+
+      // Edit the original response to remove the "Generating results..." message
+      await interaction.editReply({ content: 'Results have been revealed!', ephemeral: true });
+    } catch (error) {
+      console.error('Error generating detailed results:', error);
+
+      // Fallback to a simpler display method if the enhanced display fails
+      const simpleDisplay = prediction.options
+        .map((option, index) => {
+          const voteCount = Object.values(prediction.votes).filter((vote) => vote === index).length;
+          const isWinner = prediction.winners.includes(index);
+          const winnerText = isWinner ? ' 🏆 WINNER' : '';
+          return `${index + 1}. ${option}: ${voteCount} vote(s)${winnerText}`;
+        })
+        .join('\n');
+
+      const totalVotes = Object.keys(prediction.votes).length;
+
+      // Send a simpler version of the results
+      await interaction.followUp({
+        content: `# 🔮 Prediction Results: ${prediction.title}\n\n${simpleDisplay}\n\n*Total Votes: ${totalVotes}*\n\n*Note: Detailed voter information could not be displayed.*`,
+        ephemeral: false,
+      });
+
+      await interaction.editReply({
+        content: 'Results have been revealed (simplified view due to an error).',
+        ephemeral: true,
+      });
+    }
   },
 };
