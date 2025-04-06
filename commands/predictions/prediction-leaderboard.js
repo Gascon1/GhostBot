@@ -68,12 +68,14 @@ module.exports = {
       .filter(([, userData]) => userData.predictionStats && userData.predictionStats.totalPredictions > 0)
       // Enhance the data structure with additional fields
       .map(([userId, userData]) => {
+        console.log(userId, userData);
+
         const stats = userData.predictionStats;
         const accuracy = stats.totalPredictions > 0 ? (stats.correctPredictions / stats.totalPredictions) * 100 : 0;
 
         return {
           userId,
-          userName: userData.userName,
+          userName: userData.userName || `<@${userId}>`,
           accuracy: accuracy.toFixed(2),
           correctPredictions: stats.correctPredictions,
           totalPredictions: stats.totalPredictions,
