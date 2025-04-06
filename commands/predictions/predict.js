@@ -21,6 +21,7 @@ module.exports = {
   async autocomplete(interaction) {
     const focusedOption = interaction.options.getFocused(true);
     const focusedValue = focusedOption.value;
+    const userId = interaction.user.id;
 
     // Read the save file
     let saveData;
@@ -35,8 +36,10 @@ module.exports = {
     const predictions = saveData.predictions || [];
 
     if (focusedOption.name === 'prediction') {
-      // Only show non-revealed predictions for voting
-      const activePredictions = predictions.filter((pred) => !pred.isRevealed);
+      // Only show non-revealed predictions where the user is not excluded
+      const activePredictions = predictions.filter(
+        (pred) => !pred.isRevealed && (!pred.excludedUsers || !pred.excludedUsers.includes(userId)),
+      );
 
       let filtered = activePredictions;
 
@@ -135,6 +138,15 @@ module.exports = {
     if (prediction.isRevealed) {
       await interaction.reply({
         content: 'This prediction has already been revealed and is no longer accepting votes.',
+        ephemeral: true,
+      });
+      return;
+    }
+
+    // Check if the user is excluded from voting on this prediction
+    if (prediction.excludedUsers && prediction.excludedUsers.includes(userId)) {
+      await interaction.reply({
+        content: 'You have been excluded from voting on this prediction.',
         ephemeral: true,
       });
       return;

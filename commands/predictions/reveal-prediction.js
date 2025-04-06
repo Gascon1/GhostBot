@@ -1,236 +1,184 @@
 const { SlashCommandBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const { generateResultsDisplay } = require('../../jobs/reveal-expired-predictions');
+const { updateUserPredictionStats } = require('../../jobs/reveal-expired-predictions');
 
 const saveFilePath = path.join(__dirname, '../../save.json');
+
+// This function counts the votes and generates the results display with voter information
+async function generateCommandResultsDisplay(prediction, interaction) {
+  // Count votes for each option
+  const voteCount = {};
+  prediction.options.forEach((_, index) => {
+    voteCount[index] = 0;
+  });
+
+  // Group voters by option
+  const votersByOption = {};
+  prediction.options.forEach((_, index) => {
+    votersByOption[index] = [];
+  });
+
+  // Count the votes and collect voters
+  for (const [userId, optionIndex] of Object.entries(prediction.votes)) {
+    if (voteCount[optionIndex] !== undefined) {
+      voteCount[optionIndex]++;
+
+      try {
+        // Try to fetch the member
+        const member = await interaction.guild.members.fetch(userId);
+        if (member) {
+          votersByOption[optionIndex].push(member.user);
+        }
+      } catch {
+        // User might not be in the guild anymore, just add their ID
+        votersByOption[optionIndex].push({ id: userId, tag: `Unknown User (${userId})` });
+      }
+    }
+  }
+
+  // Generate the results text
+  const resultsDisplay = prediction.options
+    .map((option, index) => {
+      const count = voteCount[index] || 0;
+      const isWinner = prediction.winners && prediction.winners.includes(index);
+      const winnerText = isWinner ? ' 🏆 WINNER' : '';
+
+      // Format the list of voters
+      let votersList = '';
+      if (votersByOption[index].length > 0) {
+        const voterMentions = votersByOption[index]
+          .map((user) => {
+            // Add a trophy to users who picked the winning option
+            const correctPredictionMark = isWinner ? ' 🎯' : '';
+            return `<@${user.id}>${correctPredictionMark}`;
+          })
+          .join(', ');
+
+        votersList = `\n    Voters: ${voterMentions}`;
+      } else {
+        votersList = '\n    No votes';
+      }
+
+      return `${index + 1}. ${option}: ${count} vote(s)${winnerText}${votersList}`;
+    })
+    .join('\n\n');
+
+  // Get total votes
+  const totalVotes = Object.keys(prediction.votes).length;
+
+  // Count how many users predicted correctly
+  let correctPredictorsCount = 0;
+  if (prediction.winners && prediction.winners.length > 0) {
+    prediction.winners.forEach((winnerIndex) => {
+      correctPredictorsCount += votersByOption[winnerIndex].length;
+    });
+  }
+
+  // Create a summary of correct predictions
+  const correctPredictorsSummary =
+    prediction.winners && prediction.winners.length > 0
+      ? `\n\n**${correctPredictorsCount}** out of **${totalVotes}** voters predicted correctly! ${correctPredictorsCount > 0 ? '🎊' : ''}`
+      : '';
+
+  return {
+    resultsDisplay,
+    totalVotes,
+    correctPredictorsSummary,
+  };
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('reveal-prediction')
     .setDescription('Reveal the results of a prediction')
-    .addStringOption((option) =>
-      option.setName('prediction').setDescription('The prediction to reveal').setRequired(true).setAutocomplete(true),
+    .addIntegerOption((option) =>
+      option.setName('id').setDescription('The ID of the prediction to reveal').setRequired(true),
     )
-    .addStringOption((option) =>
+    .addIntegerOption((option) =>
+      option.setName('winner').setDescription('Option number that won (optional)').setRequired(false).setMinValue(1),
+    )
+    .addIntegerOption((option) =>
       option
-        .setName('winners')
-        .setDescription('The winning option(s) separated by commas (e.g., "1,3" for options 1 and 3)')
+        .setName('winner2')
+        .setDescription('Second option that won if multiple (optional)')
         .setRequired(false)
-        .setAutocomplete(true),
+        .setMinValue(1),
+    )
+    .addIntegerOption((option) =>
+      option
+        .setName('winner3')
+        .setDescription('Third option that won if multiple (optional)')
+        .setRequired(false)
+        .setMinValue(1),
     ),
-  async autocomplete(interaction) {
-    const focusedOption = interaction.options.getFocused(true);
-    const focusedValue = focusedOption.value;
-
-    // Read the save file
-    let saveData;
-    try {
-      saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
-    } catch {
-      saveData = {};
-      await interaction.respond([]);
-      return;
-    }
-
-    const predictions = saveData.predictions || [];
-
-    if (focusedOption.name === 'prediction') {
-      // For revealing, prioritize non-revealed predictions but show all
-      const orderedPredictions = [
-        ...predictions.filter((pred) => !pred.isRevealed),
-        ...predictions.filter((pred) => pred.isRevealed),
-      ];
-
-      let filtered = orderedPredictions;
-
-      if (focusedValue) {
-        const lowercasedValue = focusedValue.toLowerCase();
-        filtered = orderedPredictions.filter((pred) => pred.title.toLowerCase().includes(lowercasedValue));
-      }
-
-      const choices = filtered
-        .map((pred) => ({
-          name: `${pred.title}${pred.isRevealed ? ' (Already Revealed)' : ''}`,
-          value: pred.id,
-        }))
-        .slice(0, 25); // Discord only allows 25 choices
-
-      await interaction.respond(choices);
-    } else if (focusedOption.name === 'winners') {
-      // For selecting winners, show the options of the selected prediction with checkboxes
-      const predictionId = interaction.options.getString('prediction');
-
-      if (!predictionId) {
-        await interaction.respond([]);
-        return;
-      }
-
-      const prediction = predictions.find((pred) => pred.id === predictionId);
-
-      if (!prediction) {
-        await interaction.respond([]);
-        return;
-      }
-
-      // If already revealed, show a message
-      if (prediction.isRevealed) {
-        await interaction.respond([
-          {
-            name: 'This prediction has already been revealed.',
-            value: 'already_revealed',
-          },
-        ]);
-        return;
-      }
-
-      // Check for existing input and handle accordingly
-      if (focusedValue) {
-        // Parse the comma-separated list of selected indices
-        const selectedValues = focusedValue.split(',').map((v) => v.trim());
-
-        // Convert last one (being edited) to lowercase for case-insensitive search
-        if (selectedValues.length > 0) {
-          const lastValue = selectedValues[selectedValues.length - 1].toLowerCase();
-
-          // Filter options based on the current search term
-          const matchingOptions = prediction.options
-            .map((option, index) => ({ option, index }))
-            .filter(({ option }) => option.toLowerCase().includes(lastValue));
-
-          const choices = matchingOptions
-            .map(({ option, index }) => ({
-              name: `${index + 1}. ${option}`,
-              value:
-                selectedValues.length > 1 ? `${selectedValues.slice(0, -1).join(',')},${index + 1}` : `${index + 1}`,
-            }))
-            .slice(0, 25);
-
-          await interaction.respond(choices);
-          return;
-        }
-      }
-
-      // If no filtering, show all options
-      const choices = prediction.options
-        .map((option, index) => ({
-          name: `${index + 1}. ${option}`,
-          value: `${index + 1}`,
-        }))
-        .slice(0, 25);
-
-      await interaction.respond(choices);
-    }
-  },
   async execute(interaction) {
-    const predictionId = interaction.options.getString('prediction');
-    const winnersInput = interaction.options.getString('winners');
+    await interaction.deferReply();
 
-    // Read the save file
+    // Load save data
     let saveData;
     try {
-      saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
+      const saveRaw = fs.readFileSync(saveFilePath, 'utf8');
+      saveData = JSON.parse(saveRaw);
     } catch {
-      saveData = {};
+      return interaction.editReply('Error loading predictions.');
     }
 
-    // Check if predictions exist
-    if (!saveData.predictions || saveData.predictions.length === 0) {
-      await interaction.reply({
-        content: 'There are no predictions to reveal.',
-        ephemeral: true,
-      });
-      return;
+    // Check if predictions array exists
+    if (!saveData.predictions || !Array.isArray(saveData.predictions)) {
+      return interaction.editReply('No predictions found.');
     }
+
+    // Get prediction ID from the command
+    const predictionId = interaction.options.getInteger('id');
 
     // Find the prediction
-    const predictionIndex = saveData.predictions.findIndex((pred) => pred.id === predictionId);
+    const predictionIndex = saveData.predictions.findIndex((p) => p.id === predictionId);
     if (predictionIndex === -1) {
-      await interaction.reply({
-        content: 'Could not find that prediction. It may have been removed.',
-        ephemeral: true,
-      });
-      return;
+      return interaction.editReply(`Prediction with ID ${predictionId} not found.`);
     }
 
     const prediction = saveData.predictions[predictionIndex];
 
-    // Check if prediction is already revealed
+    // Check if already revealed
     if (prediction.isRevealed) {
-      await interaction.reply({
-        content: 'This prediction has already been revealed.',
-        ephemeral: true,
-      });
-      return;
+      return interaction.editReply(`Prediction #${predictionId} has already been revealed.`);
     }
 
-    // Mark prediction as revealed
+    // Mark as revealed
     prediction.isRevealed = true;
 
-    // Initialize winners array
+    // Process winner options if provided
+    const winnerOption1 = interaction.options.getInteger('winner');
+    const winnerOption2 = interaction.options.getInteger('winner2');
+    const winnerOption3 = interaction.options.getInteger('winner3');
+
+    // Collect valid winner options
     prediction.winners = [];
 
-    // Process winners if specified
-    if (winnersInput) {
-      const winnerNumbers = winnersInput.split(',').map((num) => parseInt(num.trim()));
-      const validWinnerNumbers = winnerNumbers.filter(
-        (num) => !isNaN(num) && num >= 1 && num <= prediction.options.length,
-      );
-
-      if (validWinnerNumbers.length > 0) {
-        prediction.winners = validWinnerNumbers.map((num) => num - 1); // Store 0-indexed
+    // Add winners if they are valid options
+    [winnerOption1, winnerOption2, winnerOption3].forEach((option) => {
+      if (option && option >= 1 && option <= prediction.options.length) {
+        // Convert from 1-indexed to 0-indexed
+        prediction.winners.push(option - 1);
       }
-    }
+    });
 
-    // Update the prediction in the save data
-    saveData.predictions[predictionIndex] = prediction;
+    // Generate the results display
+    const { resultsDisplay, totalVotes, correctPredictorsSummary } = await generateCommandResultsDisplay(
+      prediction,
+      interaction,
+    );
+
+    // Update user prediction stats
+    updateUserPredictionStats(saveData, prediction);
 
     // Save the updated data
-    fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2));
+    fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2), 'utf8');
 
-    // First, send a temporary response while we generate the detailed results (which may take time)
-    await interaction.reply({ content: 'Generating results...', ephemeral: true });
-
-    try {
-      // Get the enhanced results with voter information
-      const { resultsDisplay, totalVotes, correctPredictorsSummary } = await generateResultsDisplay(
-        prediction,
-        interaction.guild,
-      );
-
-      // Send the final reveal message with detailed results
-      await interaction.followUp({
-        content: `# 🔮 Prediction Results: ${prediction.title}\n\n${resultsDisplay}\n\n*Total Votes: ${totalVotes}*${correctPredictorsSummary}`,
-        ephemeral: false,
-      });
-
-      // Edit the original response to remove the "Generating results..." message
-      await interaction.editReply({ content: 'Results have been revealed!', ephemeral: true });
-    } catch (error) {
-      console.error('Error generating detailed results:', error);
-
-      // Fallback to a simpler display method if the enhanced display fails
-      const simpleDisplay = prediction.options
-        .map((option, index) => {
-          const voteCount = Object.values(prediction.votes).filter((vote) => vote === index).length;
-          const isWinner = prediction.winners.includes(index);
-          const winnerText = isWinner ? ' 🏆 WINNER' : '';
-          return `${index + 1}. ${option}: ${voteCount} vote(s)${winnerText}`;
-        })
-        .join('\n');
-
-      const totalVotes = Object.keys(prediction.votes).length;
-
-      // Send a simpler version of the results
-      await interaction.followUp({
-        content: `# 🔮 Prediction Results: ${prediction.title}\n\n${simpleDisplay}\n\n*Total Votes: ${totalVotes}*\n\n*Note: Detailed voter information could not be displayed.*`,
-        ephemeral: false,
-      });
-
-      await interaction.editReply({
-        content: 'Results have been revealed (simplified view due to an error).',
-        ephemeral: true,
-      });
-    }
+    // Reply with the results
+    return interaction.editReply({
+      content: `# 🔮 Prediction Results: ${prediction.title}\n\n${resultsDisplay}\n\n*Total Votes: ${totalVotes}*${correctPredictorsSummary}`,
+    });
   },
 };

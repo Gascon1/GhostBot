@@ -27,6 +27,21 @@ module.exports = {
         .setName('deadline')
         .setDescription('Deadline for voting (format: YYYY-MM-DD HH:MM, e.g., 2023-12-31 23:59)')
         .setRequired(false),
+    )
+    .addUserOption((option) =>
+      option.setName('exclude1').setDescription('User to exclude from voting (optional)').setRequired(false),
+    )
+    .addUserOption((option) =>
+      option.setName('exclude2').setDescription('User to exclude from voting (optional)').setRequired(false),
+    )
+    .addUserOption((option) =>
+      option.setName('exclude3').setDescription('User to exclude from voting (optional)').setRequired(false),
+    )
+    .addUserOption((option) =>
+      option.setName('exclude4').setDescription('User to exclude from voting (optional)').setRequired(false),
+    )
+    .addUserOption((option) =>
+      option.setName('exclude5').setDescription('User to exclude from voting (optional)').setRequired(false),
     ),
   async execute(interaction) {
     const userId = interaction.user.id;
@@ -37,6 +52,18 @@ module.exports = {
     const option4 = interaction.options.getString('option4');
     const option5 = interaction.options.getString('option5');
     const deadlineString = interaction.options.getString('deadline');
+
+    // Get excluded users
+    const excludedUser1 = interaction.options.getUser('exclude1');
+    const excludedUser2 = interaction.options.getUser('exclude2');
+    const excludedUser3 = interaction.options.getUser('exclude3');
+    const excludedUser4 = interaction.options.getUser('exclude4');
+    const excludedUser5 = interaction.options.getUser('exclude5');
+
+    // Create array of excluded user IDs, filtering out undefined values
+    const excludedUsers = [excludedUser1, excludedUser2, excludedUser3, excludedUser4, excludedUser5]
+      .filter(Boolean)
+      .map((user) => user.id);
 
     // Process deadline if provided
     let deadline = null;
@@ -94,6 +121,7 @@ module.exports = {
       votes: {},
       isRevealed: false,
       winners: [],
+      excludedUsers: excludedUsers,
     };
 
     // Add the prediction to the array
@@ -110,9 +138,13 @@ module.exports = {
       ? `\n\n**Deadline:** ${new Date(deadline).toLocaleString()}\nResults will be automatically revealed after the deadline.`
       : '';
 
+    // Format excluded users display if any
+    const excludedUsersDisplay =
+      excludedUsers.length > 0 ? `\n\n**Excluded Users:** ${excludedUsers.map((id) => `<@${id}>`).join(', ')}` : '';
+
     // Reply with confirmation
     await interaction.reply({
-      content: `# 🔮 Prediction Created: ${title}\n\n**Options:**\n${optionsDisplay}${deadlineDisplay}\n\nUsers can now vote using \`/predict\` command! The results will be hidden until revealed.`,
+      content: `# 🔮 Prediction Created: ${title}\n\n**Options:**\n${optionsDisplay}${deadlineDisplay}${excludedUsersDisplay}\n\nUsers can now vote using \`/predict\` command! The results will be hidden until revealed.`,
       ephemeral: false,
     });
   },

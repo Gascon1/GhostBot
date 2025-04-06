@@ -93,7 +93,57 @@ async function generateResultsDisplay(prediction, guild) {
     totalVotes,
     voteCount,
     correctPredictorsSummary,
+    votersByOption,
   };
+}
+
+// Function to update prediction stats for users
+function updateUserPredictionStats(saveData, prediction) {
+  const hasWinners = prediction.winners && prediction.winners.length > 0;
+
+  // Process each voter
+  for (const [userId, optionIndex] of Object.entries(prediction.votes)) {
+    // Initialize user in saveData if they don't exist
+    if (!saveData[userId]) {
+      saveData[userId] = {};
+    }
+
+    // Initialize prediction stats if they don't exist
+    if (!saveData[userId].predictionStats) {
+      saveData[userId].predictionStats = {
+        totalPredictions: 0,
+        correctPredictions: 0,
+        streak: 0,
+        highestStreak: 0,
+      };
+    }
+
+    const stats = saveData[userId].predictionStats;
+
+    // Increment total predictions
+    stats.totalPredictions++;
+
+    // Check if this prediction had winners and if the user picked correctly
+    if (hasWinners) {
+      const userPickedCorrectly = prediction.winners.includes(optionIndex);
+
+      if (userPickedCorrectly) {
+        // Increment correct predictions
+        stats.correctPredictions++;
+
+        // Increment streak
+        stats.streak++;
+
+        // Update highest streak if needed
+        if (stats.streak > stats.highestStreak) {
+          stats.highestStreak = stats.streak;
+        }
+      } else {
+        // Reset streak on incorrect prediction
+        stats.streak = 0;
+      }
+    }
+  }
 }
 
 // Schedule the task to run every minute to check for expired predictions
@@ -152,6 +202,9 @@ const revealExpiredPredictionsTask = cron.schedule('* * * * *', async () => {
     // Get results
     const { resultsDisplay, totalVotes, correctPredictorsSummary } = await generateResultsDisplay(prediction, guild);
 
+    // Update user prediction stats
+    updateUserPredictionStats(saveData, prediction);
+
     // Send the reveal message
     try {
       await announceChannel.send({
@@ -183,4 +236,4 @@ async function initialize() {
 // Initialize on module load
 initialize();
 
-module.exports = { revealExpiredPredictionsTask, generateResultsDisplay };
+module.exports = { revealExpiredPredictionsTask, generateResultsDisplay, updateUserPredictionStats };
