@@ -73,7 +73,7 @@ module.exports = {
 
         return {
           userId,
-          userName: userData.userName || `<@${userId}>`,
+          userName: userData.userName,
           accuracy: accuracy.toFixed(2),
           correctPredictions: stats.correctPredictions,
           totalPredictions: stats.totalPredictions,
