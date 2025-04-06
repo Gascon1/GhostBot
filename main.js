@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { grantFightKingAttemptsTask } = require('./jobs/grant-fight-king-attempts');
-const { revealExpiredPredictionsTask } = require('./jobs/reveal-expired-predictions');
+const { createRevealExpiredPredictionsTask } = require('./jobs/reveal-expired-predictions');
 
 // Create a new client instance
 const client = new Client({
@@ -81,6 +81,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
 client.once(Events.ClientReady, (readyClient) => {
   // Start scheduled tasks
   grantFightKingAttemptsTask.start();
+
+  // Create and start the reveal expired predictions task with the client instance
+  const revealExpiredPredictionsTask = createRevealExpiredPredictionsTask(client);
   revealExpiredPredictionsTask.start();
 
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);

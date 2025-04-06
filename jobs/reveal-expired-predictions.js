@@ -1,14 +1,8 @@
 const cron = require('node-cron');
 const fs = require('fs');
 const path = require('path');
-const { Client, GatewayIntentBits } = require('discord.js');
 
 const saveFilePath = path.join(__dirname, '../save.json');
-
-// Create a client instance for sending messages
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
-});
 
 // This function counts the votes and generates the results display with voter information
 async function generateResultsDisplay(prediction, guild) {
@@ -91,9 +85,7 @@ async function generateResultsDisplay(prediction, guild) {
   return {
     resultsDisplay,
     totalVotes,
-    voteCount,
     correctPredictorsSummary,
-    votersByOption,
   };
 }
 
@@ -146,94 +138,88 @@ function updateUserPredictionStats(saveData, prediction) {
   }
 }
 
-// Schedule the task to run every minute to check for expired predictions
-const revealExpiredPredictionsTask = cron.schedule('* * * * *', async () => {
-  // Skip if the client is not ready yet
-  if (!client.isReady()) return;
+// Create a scheduled task that will be initialized with the Discord client
+function createRevealExpiredPredictionsTask(client) {
+  // Schedule the task to run every minute to check for expired predictions
+  return cron.schedule('* * * * *', async () => {
+    // Skip if the client is not ready yet
+    if (!client.isReady()) return;
 
-  // Get current time
-  const now = new Date();
+    // Get current time
+    const now = new Date();
 
-  // Load save data
-  let saveData;
-  try {
-    saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
-  } catch (error) {
-    console.error('Error loading save data:', error);
-    return;
-  }
-
-  // Check if we have predictions data
-  if (!saveData.predictions) return;
-
-  // Find predictions with deadlines that have passed and are not yet revealed
-  const expiredPredictions = saveData.predictions.filter(
-    (pred) => pred.deadline && !pred.isRevealed && new Date(pred.deadline) <= now,
-  );
-
-  if (expiredPredictions.length === 0) return;
-
-  console.log(`Found ${expiredPredictions.length} expired predictions to reveal`);
-
-  // Get guild ID from env
-  const guildId = process.env.GUILD_ID;
-  const guild = client.guilds.cache.get(guildId);
-
-  if (!guild) {
-    console.error('Could not find guild');
-    return;
-  }
-
-  // Find the announce channel - by default use the system channel or first text channel
-  const announceChannel =
-    guild.systemChannel ||
-    guild.channels.cache.find((ch) => ch.type === 0 && ch.permissionsFor(guild.members.me).has('SendMessages'));
-
-  if (!announceChannel) {
-    console.error('Could not find a suitable channel to announce in');
-    return;
-  }
-
-  // Process each expired prediction
-  for (const prediction of expiredPredictions) {
-    // Mark as revealed
-    prediction.isRevealed = true;
-
-    // Get results
-    const { resultsDisplay, totalVotes, correctPredictorsSummary } = await generateResultsDisplay(prediction, guild);
-
-    // Update user prediction stats
-    updateUserPredictionStats(saveData, prediction);
-
-    // Send the reveal message
+    // Load save data
+    let saveData;
     try {
-      await announceChannel.send({
-        content: `# 🔮 Prediction Results (Auto-Reveal): ${prediction.title}\n\n${resultsDisplay}\n\n*Total Votes: ${totalVotes}*${correctPredictorsSummary}\n\n*This prediction has been automatically revealed because it reached its deadline.*`,
-      });
-
-      console.log(`Auto-revealed prediction: ${prediction.title}`);
+      saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
     } catch (error) {
-      console.error(`Error sending auto-reveal message for prediction ${prediction.id}:`, error);
+      console.error('Error loading save data:', error);
+      return;
     }
-  }
 
-  // Save the updated data
-  fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2), 'utf8');
+    // Check if we have predictions data
+    if (!saveData.predictions) return;
 
-  console.log('Auto-reveal task completed');
-});
+    // Find predictions with deadlines that have passed and are not yet revealed
+    const expiredPredictions = saveData.predictions.filter(
+      (pred) => pred.deadline && !pred.isRevealed && new Date(pred.deadline) <= now,
+    );
 
-// Function to initialize the client
-async function initialize() {
-  try {
-    await client.login(process.env.DISCORD_TOKEN);
-    console.log('Bot logged in for auto-reveal task');
-  } catch (error) {
-    console.error('Error logging in:', error);
-  }
+    if (expiredPredictions.length === 0) return;
+
+    console.log(`Found ${expiredPredictions.length} expired predictions to reveal`);
+
+    // Get guild ID from env
+    const guildId = process.env.GUILD_ID;
+    const guild = client.guilds.cache.get(guildId);
+
+    if (!guild) {
+      console.error('Could not find guild');
+      return;
+    }
+
+    // Find the announce channel - by default use the system channel or first text channel
+    const announceChannel =
+      guild.systemChannel ||
+      guild.channels.cache.find((ch) => ch.type === 0 && ch.permissionsFor(guild.members.me).has('SendMessages'));
+
+    if (!announceChannel) {
+      console.error('Could not find a suitable channel to announce in');
+      return;
+    }
+
+    // Process each expired prediction
+    for (const prediction of expiredPredictions) {
+      // Mark as revealed
+      prediction.isRevealed = true;
+
+      // Get results
+      const { resultsDisplay, totalVotes, correctPredictorsSummary } = await generateResultsDisplay(prediction, guild);
+
+      // Update user prediction stats
+      updateUserPredictionStats(saveData, prediction);
+
+      // Send the reveal message
+      try {
+        await announceChannel.send({
+          content: `# 🔮 Prediction Results (Auto-Reveal): ${prediction.title}\n\n${resultsDisplay}\n\n*Total Votes: ${totalVotes}*${correctPredictorsSummary}\n\n*This prediction has been automatically revealed because it reached its deadline.*`,
+        });
+
+        console.log(`Auto-revealed prediction: ${prediction.title}`);
+      } catch (error) {
+        console.error(`Error sending auto-reveal message for prediction ${prediction.id}:`, error);
+      }
+    }
+
+    // Save the updated data
+    fs.writeFileSync(saveFilePath, JSON.stringify(saveData, null, 2), 'utf8');
+
+    console.log('Auto-reveal task completed');
+  });
 }
 
-// Initialize on module load
-initialize();
-
-module.exports = { revealExpiredPredictionsTask, generateResultsDisplay, updateUserPredictionStats };
+module.exports = {
+  createRevealExpiredPredictionsTask,
+  generateResultsDisplay,
+  updateUserPredictionStats,
+};

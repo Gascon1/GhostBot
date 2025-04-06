@@ -22,6 +22,8 @@ module.exports = {
     ),
 
   async execute(interaction) {
+    await interaction.deferReply(); // Defer the reply as we might need time to fetch usernames
+
     const filePath = path.join(__dirname, '../../save.json');
 
     // Load save data
@@ -29,7 +31,7 @@ module.exports = {
     try {
       saveData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     } catch {
-      return interaction.reply('Error loading prediction stats.');
+      return interaction.editReply('Error loading prediction stats.');
     }
 
     // Get sortBy option, default to accuracy
@@ -63,38 +65,52 @@ module.exports = {
     leaderboardTable.setAlign(3, AsciiTable.CENTER);
     leaderboardTable.setAlign(4, AsciiTable.CENTER);
 
-    // Filter users with prediction stats
-    const usersWithPredictions = await Promise.all(
-      Object.entries(saveData)
-        .filter(([, userData]) => userData.predictionStats && userData.predictionStats.totalPredictions > 0)
-        // Enhance the data structure with additional fields
-        .map(async ([userId, userData]) => {
-          const stats = userData.predictionStats;
-          const accuracy = stats.totalPredictions > 0 ? (stats.correctPredictions / stats.totalPredictions) * 100 : 0;
+    // Get the guild for member lookup
+    const guild = interaction.guild;
 
-          // Try to get member's nickname or username from the guild
-          let displayName = userData.userName || userId;
-          try {
-            const member = await interaction.guild.members.fetch(userId);
-            if (member) {
-              // Use nickname if available, otherwise fall back to username
-              displayName = member.nickname || member.user.username || displayName;
-            }
-          } catch {
-            // If we can't fetch the member, use whatever name we already have
-          }
+    // First, collect all user IDs that need to be looked up
+    const userIds = Object.entries(saveData)
+      .filter(([, userData]) => userData.predictionStats && userData.predictionStats.totalPredictions > 0)
+      .map(([userId]) => userId);
 
-          return {
-            userId,
-            userName: displayName,
-            accuracy: accuracy.toFixed(2),
-            correctPredictions: stats.correctPredictions,
-            totalPredictions: stats.totalPredictions,
-            streak: stats.streak || 0,
-            highestStreak: stats.highestStreak || 0,
-          };
-        }),
-    );
+    // Cache for storing member display names
+    const userNameCache = new Map();
+
+    // Batch fetch members by their IDs to optimize API calls
+    if (userIds.length > 0) {
+      try {
+        const members = await guild.members.fetch({ user: userIds });
+
+        // Cache the display names
+        members.forEach((member) => {
+          userNameCache.set(member.id, member.nickname || member.user.username || member.user.id);
+        });
+      } catch (error) {
+        console.error('Error fetching guild members:', error);
+        // Continue with processing; we'll use fallback names for any members we couldn't fetch
+      }
+    }
+
+    // Filter and map users with prediction stats
+    const usersWithPredictions = Object.entries(saveData)
+      .filter(([, userData]) => userData.predictionStats && userData.predictionStats.totalPredictions > 0)
+      .map(([userId, userData]) => {
+        const stats = userData.predictionStats;
+        const accuracy = stats.totalPredictions > 0 ? (stats.correctPredictions / stats.totalPredictions) * 100 : 0;
+
+        // Use cached display name or fall back to user ID
+        const displayName = userNameCache.get(userId) || userId.substring(0, 10) + '...';
+
+        return {
+          userId,
+          userName: displayName,
+          accuracy: accuracy.toFixed(2),
+          correctPredictions: stats.correctPredictions,
+          totalPredictions: stats.totalPredictions,
+          streak: stats.streak || 0,
+          highestStreak: stats.highestStreak || 0,
+        };
+      });
 
     // Sort the data based on the selected sort criteria
     let sortedUsers;
@@ -172,7 +188,7 @@ module.exports = {
 
     // If no users have prediction stats
     if (sortedUsers.length === 0) {
-      return interaction.reply('No prediction stats found. Make some predictions first!');
+      return interaction.editReply('No prediction stats found. Make some predictions first!');
     }
 
     // Get sort type for display
@@ -200,7 +216,7 @@ module.exports = {
     /* eslint-enable indent */
 
     // Format the response
-    await interaction.reply(
+    await interaction.editReply(
       `**Prediction Leaderboard** (Sorted by ${sortTypeDisplay})\n\`\`\`\n${leaderboardTable.toString()}\n\`\`\``,
     );
   },

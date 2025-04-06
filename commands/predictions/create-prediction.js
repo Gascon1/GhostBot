@@ -39,9 +39,6 @@ module.exports = {
     )
     .addUserOption((option) =>
       option.setName('exclude4').setDescription('User to exclude from voting (optional)').setRequired(false),
-    )
-    .addUserOption((option) =>
-      option.setName('exclude5').setDescription('User to exclude from voting (optional)').setRequired(false),
     ),
   async execute(interaction) {
     const userId = interaction.user.id;
@@ -58,10 +55,9 @@ module.exports = {
     const excludedUser2 = interaction.options.getUser('exclude2');
     const excludedUser3 = interaction.options.getUser('exclude3');
     const excludedUser4 = interaction.options.getUser('exclude4');
-    const excludedUser5 = interaction.options.getUser('exclude5');
 
     // Create array of excluded user IDs, filtering out undefined values
-    const excludedUsers = [excludedUser1, excludedUser2, excludedUser3, excludedUser4, excludedUser5]
+    const excludedUsers = [excludedUser1, excludedUser2, excludedUser3, excludedUser4]
       .filter(Boolean)
       .map((user) => user.id);
 
