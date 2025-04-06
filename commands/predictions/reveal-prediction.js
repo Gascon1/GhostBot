@@ -92,8 +92,8 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('reveal-prediction')
     .setDescription('Reveal the results of a prediction')
-    .addIntegerOption((option) =>
-      option.setName('id').setDescription('The ID of the prediction to reveal').setRequired(true),
+    .addStringOption((option) =>
+      option.setName('prediction').setDescription('The prediction to reveal').setRequired(true).setAutocomplete(true),
     )
     .addIntegerOption((option) =>
       option.setName('winner').setDescription('Option number that won (optional)').setRequired(false).setMinValue(1),
@@ -112,6 +112,48 @@ module.exports = {
         .setRequired(false)
         .setMinValue(1),
     ),
+
+  async autocomplete(interaction) {
+    const focusedOption = interaction.options.getFocused(true);
+    const focusedValue = focusedOption.value;
+
+    // Read the save file
+    let saveData;
+    try {
+      saveData = JSON.parse(fs.readFileSync(saveFilePath, 'utf8'));
+    } catch {
+      saveData = {};
+      await interaction.respond([]);
+      return;
+    }
+
+    const predictions = saveData.predictions || [];
+
+    if (focusedOption.name === 'prediction') {
+      // For revealing, prioritize non-revealed predictions but show all
+      const orderedPredictions = [
+        ...predictions.filter((pred) => !pred.isRevealed),
+        ...predictions.filter((pred) => pred.isRevealed),
+      ];
+
+      let filtered = orderedPredictions;
+
+      if (focusedValue) {
+        const lowercasedValue = focusedValue.toLowerCase();
+        filtered = orderedPredictions.filter((pred) => pred.title.toLowerCase().includes(lowercasedValue));
+      }
+
+      const choices = filtered
+        .map((pred) => ({
+          name: `${pred.title}${pred.isRevealed ? ' (Already Revealed)' : ''}`,
+          value: pred.id,
+        }))
+        .slice(0, 25); // Discord only allows 25 choices
+
+      await interaction.respond(choices);
+    }
+  },
+
   async execute(interaction) {
     await interaction.deferReply();
 
@@ -130,7 +172,7 @@ module.exports = {
     }
 
     // Get prediction ID from the command
-    const predictionId = interaction.options.getInteger('id');
+    const predictionId = interaction.options.getString('prediction');
 
     // Find the prediction
     const predictionIndex = saveData.predictions.findIndex((p) => p.id === predictionId);
@@ -142,7 +184,7 @@ module.exports = {
 
     // Check if already revealed
     if (prediction.isRevealed) {
-      return interaction.editReply(`Prediction #${predictionId} has already been revealed.`);
+      return interaction.editReply(`Prediction "${prediction.title}" has already been revealed.`);
     }
 
     // Mark as revealed
