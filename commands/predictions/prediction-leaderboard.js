@@ -64,25 +64,37 @@ module.exports = {
     leaderboardTable.setAlign(4, AsciiTable.CENTER);
 
     // Filter users with prediction stats
-    const usersWithPredictions = Object.entries(saveData)
-      .filter(([, userData]) => userData.predictionStats && userData.predictionStats.totalPredictions > 0)
-      // Enhance the data structure with additional fields
-      .map(([userId, userData]) => {
-        console.log(userId, userData);
+    const usersWithPredictions = await Promise.all(
+      Object.entries(saveData)
+        .filter(([, userData]) => userData.predictionStats && userData.predictionStats.totalPredictions > 0)
+        // Enhance the data structure with additional fields
+        .map(async ([userId, userData]) => {
+          const stats = userData.predictionStats;
+          const accuracy = stats.totalPredictions > 0 ? (stats.correctPredictions / stats.totalPredictions) * 100 : 0;
 
-        const stats = userData.predictionStats;
-        const accuracy = stats.totalPredictions > 0 ? (stats.correctPredictions / stats.totalPredictions) * 100 : 0;
+          // Try to get member's nickname or username from the guild
+          let displayName = userData.userName || userId;
+          try {
+            const member = await interaction.guild.members.fetch(userId);
+            if (member) {
+              // Use nickname if available, otherwise fall back to username
+              displayName = member.nickname || member.user.username || displayName;
+            }
+          } catch {
+            // If we can't fetch the member, use whatever name we already have
+          }
 
-        return {
-          userId,
-          userName: userData.userName || `<@${userId}>`,
-          accuracy: accuracy.toFixed(2),
-          correctPredictions: stats.correctPredictions,
-          totalPredictions: stats.totalPredictions,
-          streak: stats.streak || 0,
-          highestStreak: stats.highestStreak || 0,
-        };
-      });
+          return {
+            userId,
+            userName: displayName,
+            accuracy: accuracy.toFixed(2),
+            correctPredictions: stats.correctPredictions,
+            totalPredictions: stats.totalPredictions,
+            streak: stats.streak || 0,
+            highestStreak: stats.highestStreak || 0,
+          };
+        }),
+    );
 
     // Sort the data based on the selected sort criteria
     let sortedUsers;
