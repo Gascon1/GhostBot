@@ -6,4 +6,4 @@
 4. `npm i` to install dependencies.
 5. `npm run deploy-commands` to load up the available GhostBot commands
 6. `npm run start` to make the bot come online
-
+7. Enjoy!
