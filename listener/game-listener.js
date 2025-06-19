@@ -133,7 +133,7 @@ module.exports = (client) => {
   async function handleGameCommand(game, method, interaction, args) {
     const target = {
       [Games.Connections]: connections,
-      [Games.Connections]: strands,
+      [Games.Strands]: strands,
       [Games.WordleEN]: wordle,
       [Games.WordleFR]: leMot,
     }[game];
