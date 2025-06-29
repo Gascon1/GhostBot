@@ -1,4 +1,3 @@
-const { Events } = require('discord.js');
 const { Games, getGameFromChannel, isWordleENSubmission, isConnectionsSubmission, isStrandsSubmission, isPipsSubmission } = require('../lib/nyt-games/games-utils');
 
 module.exports = (client) => {
@@ -48,9 +47,13 @@ module.exports = (client) => {
   // Initial setup
   buildHelpMenu();
 
-  client.on(Events.MessageCreate, async (message) => {
+  client.on('messageCreate', async (message) => {
     if (message.author.bot || message.guild === null) return;
-
+    if (message.channel.isThread()) {
+      if (message.channel.id === '1388350108491579552') {
+        console.log("-- Wordle FR --");
+      }
+    }
     try {
       const userId = message.author.id;
       const lines = message.content.split('\n');
