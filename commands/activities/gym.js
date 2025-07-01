@@ -44,25 +44,32 @@ module.exports = {
       // Try to log the gym session
       await gymService.logGymSession(member.id, todayDate, workoutDescription);
 
-      // Calculate streak and total sessions
-      const currentStreak = await gymService.calculateUserStreak(member.id);
+      // Get weekly progress and streak
+      const progress = await gymService.getCurrentWeekProgress(member.id);
+      const currentStreak = await gymService.calculateWeeklyStreak(member.id);
       const userSessions = await gymService.getUserGymSessions(member.id);
       const totalSessions = userSessions.length;
 
       // Create response message
       const randomGymEmoji = getRandomGymEmoji();
-      let streakText = '';
+      let progressText = '';
 
-      if (currentStreak > 1) {
-        streakText = `🔥 **${currentStreak} day streak!** 🔥\n`;
-      } else if (currentStreak === 1) {
-        streakText = `🌟 **Day 1 of your streak!** 🌟\n`;
+      if (progress.goalMet) {
+        progressText = `🎉 **Weekly goal achieved!** (${progress.sessionsThisWeek}/${progress.weeklyGoal})\n`;
+      } else {
+        progressText = `📊 **This week:** ${progress.sessionsThisWeek}/${progress.weeklyGoal} sessions (${progress.remaining} more to go!)\n`;
+      }
+
+      let streakText = '';
+      if (currentStreak > 0) {
+        streakText = `🔥 **Weekly streak:** ${currentStreak} week${currentStreak !== 1 ? 's' : ''}!\n`;
       }
 
       const responseText =
         `# ${meepleEmoji}${randomGymEmoji} Gym Session Logged!\n` +
         `**Workout:** ${workoutDescription}\n` +
         `**Date:** ${todayDate}\n` +
+        `${progressText}` +
         `${streakText}` +
         `**Total Sessions:** ${totalSessions}\n\n` +
         `Keep crushing it! 💪`;

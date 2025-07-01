@@ -50,14 +50,15 @@ module.exports = {
 
         if (!userSessions || userSessions.length === 0) {
           await interaction.reply({
-            content: `${meepleEmoji} You haven't logged any gym sessions yet! Use \`/gym\` to get started! 💪`,
+            content: `${meepleEmoji} You haven't logged any gym sessions yet! Use \`/gym\` to get started! 💪\n\nTip: Set your weekly goal with \`/gym-goal\``,
             flags: [MessageFlags.Ephemeral],
           });
           return;
         }
 
-        const currentStreak = await gymService.calculateUserStreak(member.id);
-        const maxStreak = await gymService.getUserMaxStreak(member.id);
+        const currentStreak = await gymService.calculateWeeklyStreak(member.id);
+        const maxStreak = await gymService.getUserMaxWeeklyStreak(member.id);
+        const progress = await gymService.getCurrentWeekProgress(member.id);
         const totalSessions = userSessions.length;
         const lastWorkout = userSessions[0]; // Sessions are ordered by date DESC
         const daysSinceLastWorkout = getDaysAgo(lastWorkout.date);
@@ -72,8 +73,18 @@ module.exports = {
           .setColor(0x00ae86)
           .setTitle(`${meepleEmoji} Your Gym Stats`)
           .addFields(
-            { name: '🔥 Current Streak', value: `${currentStreak} days`, inline: true },
-            { name: '🏆 Best Streak', value: `${maxStreak} days`, inline: true },
+            { name: '🎯 Weekly Goal', value: `${progress.weeklyGoal} sessions per week`, inline: true },
+            {
+              name: '📊 This Week',
+              value: `${progress.sessionsThisWeek}/${progress.weeklyGoal} sessions${progress.goalMet ? ' ✅' : ''}`,
+              inline: true,
+            },
+            {
+              name: '🔥 Current Streak',
+              value: `${currentStreak} week${currentStreak !== 1 ? 's' : ''}`,
+              inline: true,
+            },
+            { name: '🏆 Best Streak', value: `${maxStreak} week${maxStreak !== 1 ? 's' : ''}`, inline: true },
             { name: '💪 Total Sessions', value: `${totalSessions}`, inline: true },
             {
               name: '📅 Last Workout',
@@ -83,7 +94,7 @@ module.exports = {
                   : daysSinceLastWorkout === 1
                     ? 'Yesterday'
                     : `${daysSinceLastWorkout} days ago`,
-              inline: false,
+              inline: true,
             },
             { name: '📝 Recent Workouts', value: recentWorkouts || 'No recent workouts', inline: false },
           )
@@ -128,7 +139,8 @@ module.exports = {
         // Calculate streaks for each user and create leaderboard data
         const userStats = [];
         for (const userStat of allUserStats) {
-          const currentStreak = await gymService.calculateUserStreak(userStat.user_id);
+          const currentStreak = await gymService.calculateWeeklyStreak(userStat.user_id);
+          const weeklyGoal = await gymService.getUserWeeklyGoal(userStat.user_id);
           const userMeepleData = Object.values(meepleEmojis).find((meeple) => meeple.userId === userStat.user_id);
           const userEmoji = userMeepleData ? userMeepleData.meeple : '👤';
 
@@ -136,6 +148,7 @@ module.exports = {
             userId: userStat.user_id,
             userEmoji,
             currentStreak,
+            weeklyGoal,
             totalSessions: userStat.total_sessions,
           });
         }
@@ -153,7 +166,7 @@ module.exports = {
           .slice(0, 10) // Top 10
           .map((user, index) => {
             const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-            return `${medal} ${user.userEmoji} **${user.currentStreak}** day streak (${user.totalSessions} total)`;
+            return `${medal} ${user.userEmoji} **${user.currentStreak}** week streak (${user.totalSessions} total, ${user.weeklyGoal}/week goal)`;
           })
           .join('\n');
 
@@ -161,7 +174,7 @@ module.exports = {
           .setColor(0x00ae86)
           .setTitle('🏆 Gym Leaderboard')
           .setDescription(leaderboard)
-          .setFooter({ text: 'Ranked by current streak, then total sessions' })
+          .setFooter({ text: 'Ranked by weekly streak, then total sessions' })
           .setTimestamp();
 
         await interaction.reply({ embeds: [embed] });
