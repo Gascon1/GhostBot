@@ -15,7 +15,20 @@
     "lastReviveAttemptTime": "12:00",
     "remainingFightAttempts": 3,
     "fishingLevel": 3,
-    "fishingXp": 29
+    "fishingXp": 29,
+    "gymSessions": [
+      {
+        "date": "2025-07-01",
+        "workout": "General workout",
+        "timestamp": "2025-07-01T00:01:10.409Z"
+      },
+      {
+        "date": "2025-06-30",
+        "workout": "General workout",
+        "timestamp": "2025-06-30T23:47:43.642Z"
+      }
+    ],
+    "maxGymStreak": 2
   },
   "177948962626469889": {
     "reviveAttempts": 1,
