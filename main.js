@@ -5,6 +5,7 @@ const path = require('node:path');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const { grantFightKingAttemptsTask } = require('./jobs/grant-fight-king-attempts');
 const { createRevealExpiredPredictionsTask } = require('./jobs/reveal-expired-predictions');
+const { createPriceMonitoringTask } = require('./jobs/price-monitoring');
 const database = require('./lib/database');
 
 // Create a new client instance
@@ -116,6 +117,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   // Create and start the reveal expired predictions task with the client instance
   const revealExpiredPredictionsTask = createRevealExpiredPredictionsTask(client);
   revealExpiredPredictionsTask.start();
+
+  // Create and start the price monitoring task with the client instance
+  const priceMonitoringTask = createPriceMonitoringTask(client);
+  priceMonitoringTask.start();
 
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
