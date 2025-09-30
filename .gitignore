@@ -73,6 +73,12 @@ web_modules/
 .env.test
 .env.production
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+ghostbot.db
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

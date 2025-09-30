@@ -130,7 +130,10 @@ async function sendListPriceNotification(channel, listData) {
       // Create quick links summary
       const quickLinks = priceDrops
         .slice(0, 10) // Limit to 10 items to avoid message being too long
-        .map((change, index) => `${index + 1}. [${change.partName.substring(0, 30)}...](${change.partUrl || 'https://pcpartpicker.com'}) - **Save $${Math.abs(change.priceDifference).toFixed(2)}**`)
+        .map(
+          (change, index) =>
+            `${index + 1}. [${change.partName.substring(0, 30)}...](${change.partUrl || 'https://pcpartpicker.com'}) - **Save $${Math.abs(change.priceDifference).toFixed(2)}**`,
+        )
         .join('\n');
 
       const embed = {

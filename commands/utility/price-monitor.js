@@ -5,54 +5,45 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('price-monitor')
     .setDescription('Manage PC parts price monitoring')
-    .addSubcommand(subcommand =>
+    .addSubcommand((subcommand) =>
       subcommand
         .setName('add')
         .setDescription('Add a PCPartPicker list to monitor')
-        .addStringOption(option =>
+        .addStringOption((option) =>
           option
             .setName('url')
             .setDescription('PCPartPicker list URL (e.g., https://ca.pcpartpicker.com/list/tyktZc)')
             .setRequired(true),
         )
-        .addStringOption(option =>
-          option
-            .setName('name')
-            .setDescription('Custom name for the list (optional)')
-            .setRequired(false),
+        .addStringOption((option) =>
+          option.setName('name').setDescription('Custom name for the list (optional)').setRequired(false),
         ),
     )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('list')
-        .setDescription('Show all monitored PC parts lists'),
-    )
-    .addSubcommand(subcommand =>
+    .addSubcommand((subcommand) => subcommand.setName('list').setDescription('Show all monitored PC parts lists'))
+    .addSubcommand((subcommand) =>
       subcommand
         .setName('remove')
         .setDescription('Remove a list from monitoring (keeps data)')
-        .addIntegerOption(option =>
+        .addIntegerOption((option) =>
           option
             .setName('id')
             .setDescription('List ID to remove (use /price-monitor list to see IDs)')
             .setRequired(true),
         ),
     )
-    .addSubcommand(subcommand =>
+    .addSubcommand((subcommand) =>
       subcommand
         .setName('delete')
         .setDescription('Permanently delete a list and all its data (admin only)')
-        .addIntegerOption(option =>
+        .addIntegerOption((option) =>
           option
             .setName('id')
             .setDescription('List ID to delete permanently (use /price-monitor list to see IDs)')
             .setRequired(true),
         ),
     )
-    .addSubcommand(subcommand =>
-      subcommand
-        .setName('check')
-        .setDescription('Manually trigger a price check (admin only)'),
+    .addSubcommand((subcommand) =>
+      subcommand.setName('check').setDescription('Manually trigger a price check (admin only)'),
     ),
 
   async execute(interaction) {
@@ -61,26 +52,26 @@ module.exports = {
 
     try {
       switch (subcommand) {
-      case 'add':
-        await handleAddList(interaction, priceMonitoringService);
-        break;
-      case 'list':
-        await handleListMonitored(interaction, priceMonitoringService);
-        break;
-      case 'remove':
-        await handleRemoveList(interaction, priceMonitoringService);
-        break;
-      case 'delete':
-        await handleDeleteList(interaction, priceMonitoringService);
-        break;
-      case 'check':
-        await handleManualCheck(interaction, priceMonitoringService);
-        break;
-      default:
-        await interaction.reply({
-          content: 'Unknown subcommand.',
-          ephemeral: true,
-        });
+        case 'add':
+          await handleAddList(interaction, priceMonitoringService);
+          break;
+        case 'list':
+          await handleListMonitored(interaction, priceMonitoringService);
+          break;
+        case 'remove':
+          await handleRemoveList(interaction, priceMonitoringService);
+          break;
+        case 'delete':
+          await handleDeleteList(interaction, priceMonitoringService);
+          break;
+        case 'check':
+          await handleManualCheck(interaction, priceMonitoringService);
+          break;
+        default:
+          await interaction.reply({
+            content: 'Unknown subcommand.',
+            ephemeral: true,
+          });
       }
     } catch (error) {
       console.error('Error in price-monitor command:', error);
@@ -158,23 +149,27 @@ async function handleListMonitored(interaction, priceMonitoringService) {
 
   const embed = new EmbedBuilder()
     .setTitle('📋 Monitored PC Parts Lists')
-    .setDescription(`Currently monitoring ${lists.length} list${lists.length !== 1 ? 's' : ''}\n\n**To remove a list, use:** \`/price-monitor remove id:<ID>\`\n**To permanently delete:** \`/price-monitor delete id:<ID>\``)
+    .setDescription(
+      `Currently monitoring ${lists.length} list${lists.length !== 1 ? 's' : ''}\n\n**To remove a list, use:** \`/price-monitor remove id:<ID>\`\n**To permanently delete:** \`/price-monitor delete id:<ID>\``,
+    )
     .setColor(0x0099ff)
     .setTimestamp();
 
   // Add fields for each list
-  for (const list of lists.slice(0, 25)) { // Discord limit of 25 fields
+  for (const list of lists.slice(0, 25)) {
+    // Discord limit of 25 fields
     const avgPrice = list.avg_price ? `$${parseFloat(list.avg_price).toFixed(2)}` : 'N/A';
     const minPrice = list.min_price ? `$${parseFloat(list.min_price).toFixed(2)}` : 'N/A';
     const maxPrice = list.max_price ? `$${parseFloat(list.max_price).toFixed(2)}` : 'N/A';
 
     embed.addFields({
       name: `🆔 ID: ${list.id} | ${list.list_name}`,
-      value: `**Parts:** ${list.part_count}\n` +
-             `**Price Range:** ${minPrice} - ${maxPrice}\n` +
-             `**Average:** ${avgPrice}\n` +
-             `**Added:** ${new Date(list.created_at).toLocaleDateString()}\n` +
-             `**Remove command:** \`/price-monitor remove id:${list.id}\``,
+      value:
+        `**Parts:** ${list.part_count}\n` +
+        `**Price Range:** ${minPrice} - ${maxPrice}\n` +
+        `**Average:** ${avgPrice}\n` +
+        `**Added:** ${new Date(list.created_at).toLocaleDateString()}\n` +
+        `**Remove command:** \`/price-monitor remove id:${list.id}\``,
       inline: true,
     });
   }
@@ -243,9 +238,10 @@ async function handleManualCheck(interaction, priceMonitoringService) {
 
     if (result.totalChanges > 0) {
       let changesText = '';
-      for (const listData of result.priceChanges.slice(0, 5)) { // Show first 5 lists
-        const drops = listData.changes.filter(c => c.isDecrease).length;
-        const increases = listData.changes.filter(c => !c.isDecrease).length;
+      for (const listData of result.priceChanges.slice(0, 5)) {
+        // Show first 5 lists
+        const drops = listData.changes.filter((c) => c.isDecrease).length;
+        const increases = listData.changes.filter((c) => !c.isDecrease).length;
         changesText += `**${listData.listName}:** ${drops} drops, ${increases} increases\n`;
       }
 
