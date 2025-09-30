@@ -44,6 +44,27 @@ module.exports = {
     )
     .addSubcommand((subcommand) =>
       subcommand.setName('check').setDescription('Manually trigger a price check (admin only)'),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('thresholds')
+        .setDescription('Set notification thresholds (admin only)')
+        .addNumberOption((option) =>
+          option
+            .setName('price-drop')
+            .setDescription('Minimum percentage drop to notify (default: 5%)')
+            .setRequired(false)
+            .setMinValue(0)
+            .setMaxValue(100),
+        )
+        .addNumberOption((option) =>
+          option
+            .setName('price-increase')
+            .setDescription('Minimum percentage increase to notify (default: 10%)')
+            .setRequired(false)
+            .setMinValue(0)
+            .setMaxValue(100),
+        ),
     ),
 
   async execute(interaction) {
@@ -52,26 +73,29 @@ module.exports = {
 
     try {
       switch (subcommand) {
-        case 'add':
-          await handleAddList(interaction, priceMonitoringService);
-          break;
-        case 'list':
-          await handleListMonitored(interaction, priceMonitoringService);
-          break;
-        case 'remove':
-          await handleRemoveList(interaction, priceMonitoringService);
-          break;
-        case 'delete':
-          await handleDeleteList(interaction, priceMonitoringService);
-          break;
-        case 'check':
-          await handleManualCheck(interaction, priceMonitoringService);
-          break;
-        default:
-          await interaction.reply({
-            content: 'Unknown subcommand.',
-            ephemeral: true,
-          });
+      case 'add':
+        await handleAddList(interaction, priceMonitoringService);
+        break;
+      case 'list':
+        await handleListMonitored(interaction, priceMonitoringService);
+        break;
+      case 'remove':
+        await handleRemoveList(interaction, priceMonitoringService);
+        break;
+      case 'delete':
+        await handleDeleteList(interaction, priceMonitoringService);
+        break;
+      case 'check':
+        await handleManualCheck(interaction, priceMonitoringService);
+        break;
+      case 'thresholds':
+        await handleSetThresholds(interaction, priceMonitoringService);
+        break;
+      default:
+        await interaction.reply({
+          content: 'Unknown subcommand.',
+          ephemeral: true,
+        });
       }
     } catch (error) {
       console.error('Error in price-monitor command:', error);
@@ -299,6 +323,93 @@ async function handleDeleteList(interaction, priceMonitoringService) {
   } else {
     const embed = new EmbedBuilder()
       .setTitle('❌ Failed to Delete List')
+      .setDescription(result.error)
+      .setColor(0xff0000)
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  }
+}
+
+/**
+ * Handle setting notification thresholds (admin only)
+ */
+async function handleSetThresholds(interaction, priceMonitoringService) {
+  // Check if user has admin permissions
+  if (!interaction.member.permissions.has('Administrator')) {
+    await interaction.reply({
+      content: '❌ This command requires Administrator permissions.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const priceDropThreshold = interaction.options.getNumber('price-drop');
+  const priceIncreaseThreshold = interaction.options.getNumber('price-increase');
+
+  await interaction.deferReply();
+
+  // If no parameters provided, show current settings
+  if (priceDropThreshold === null && priceIncreaseThreshold === null) {
+    const currentThresholds = priceMonitoringService.getNotificationThresholds();
+
+    const embed = new EmbedBuilder()
+      .setTitle('⚙️ Current Notification Thresholds')
+      .addFields(
+        {
+          name: '📉 Price Drop Threshold',
+          value: `${currentThresholds.priceDropThresholdPercent}%`,
+          inline: true,
+        },
+        {
+          name: '📈 Price Increase Threshold',
+          value: `${currentThresholds.priceIncreaseThresholdPercent}%`,
+          inline: true,
+        },
+        {
+          name: '💰 Minimum Change',
+          value: `$${currentThresholds.minPriceChangeThreshold}`,
+          inline: true,
+        },
+      )
+      .setDescription('Only price changes above these thresholds will trigger notifications.\n\nTo update: `/price-monitor thresholds price-drop:5 price-increase:10`')
+      .setColor(0x0099ff)
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+    return;
+  }
+
+  // Update thresholds
+  const currentThresholds = priceMonitoringService.getNotificationThresholds();
+  const newDropThreshold = priceDropThreshold !== null ? priceDropThreshold : currentThresholds.priceDropThresholdPercent;
+  const newIncreaseThreshold = priceIncreaseThreshold !== null ? priceIncreaseThreshold : currentThresholds.priceIncreaseThresholdPercent;
+
+  const result = priceMonitoringService.setNotificationThresholds(newDropThreshold, newIncreaseThreshold);
+
+  if (result.success) {
+    const embed = new EmbedBuilder()
+      .setTitle('✅ Notification Thresholds Updated')
+      .setDescription(result.message)
+      .addFields(
+        {
+          name: '📉 Price Drop Threshold',
+          value: `${newDropThreshold}%`,
+          inline: true,
+        },
+        {
+          name: '📈 Price Increase Threshold',
+          value: `${newIncreaseThreshold}%`,
+          inline: true,
+        },
+      )
+      .setColor(0x00ff00)
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  } else {
+    const embed = new EmbedBuilder()
+      .setTitle('❌ Failed to Update Thresholds')
       .setDescription(result.error)
       .setColor(0xff0000)
       .setTimestamp();
