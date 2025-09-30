@@ -106,7 +106,8 @@ async function sendListPriceNotification(channel, listData) {
         `**${change.partType}**\n` +
         `~~$${change.oldPrice.toFixed(2)}~~ → **$${change.newPrice.toFixed(2)}**\n` +
         `💰 Save $${Math.abs(change.priceDifference).toFixed(2)} (${Math.abs(change.percentChange)}%)\n` +
-        `🏪 ${change.merchant}`,
+        `🏪 ${change.merchant}\n` +
+        `🔗 [View Product](${change.partUrl || 'https://pcpartpicker.com'})`,
       inline: true,
     }));
 
@@ -117,7 +118,8 @@ async function sendListPriceNotification(channel, listData) {
         `**${change.partType}**\n` +
         `$${change.oldPrice.toFixed(2)} → **$${change.newPrice.toFixed(2)}**\n` +
         `📈 +$${change.priceDifference.toFixed(2)} (+${change.percentChange}%)\n` +
-        `🏪 ${change.merchant}`,
+        `🏪 ${change.merchant}\n` +
+        `🔗 [View Product](${change.partUrl || 'https://pcpartpicker.com'})`,
       inline: true,
     }));
 
@@ -125,24 +127,37 @@ async function sendListPriceNotification(channel, listData) {
     if (priceDrops.length > 0) {
       const totalSavings = priceDrops.reduce((sum, change) => sum + Math.abs(change.priceDifference), 0);
 
-      await channel.send({
-        embeds: [
-          {
-            title: '🎉 Price Drops Detected!',
-            description: `**${listName}**\n\nFound ${priceDrops.length} price drop${priceDrops.length !== 1 ? 's' : ''} with total potential savings of **$${totalSavings.toFixed(2)}**!`,
-            color: 0x00ff00, // Green color for price drops
-            fields: dropFields.slice(0, 25), // Discord limit of 25 fields
-            timestamp: new Date().toISOString(),
-            footer: {
-              text: 'PC Parts Price Monitor',
-            },
-          },
-        ],
-      });
+      // Create quick links summary
+      const quickLinks = priceDrops
+        .slice(0, 10) // Limit to 10 items to avoid message being too long
+        .map((change, index) => `${index + 1}. [${change.partName.substring(0, 30)}...](${change.partUrl || 'https://pcpartpicker.com'}) - **Save $${Math.abs(change.priceDifference).toFixed(2)}**`)
+        .join('\n');
 
-      // If there are more than 25 price drops, send additional messages
-      if (dropFields.length > 25) {
-        const remainingFields = dropFields.slice(25);
+      const embed = {
+        title: '🎉 Price Drops Detected!',
+        description: `**${listName}**\n\nFound ${priceDrops.length} price drop${priceDrops.length !== 1 ? 's' : ''} with total potential savings of **$${totalSavings.toFixed(2)}**!`,
+        color: 0x00ff00, // Green color for price drops
+        fields: dropFields.slice(0, 20), // Leave room for quick links field
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: 'PC Parts Price Monitor',
+        },
+      };
+
+      // Add quick links field if we have price drops
+      if (quickLinks) {
+        embed.fields.push({
+          name: '🛒 Quick Purchase Links',
+          value: quickLinks + (priceDrops.length > 10 ? `\n... and ${priceDrops.length - 10} more deals` : ''),
+          inline: false,
+        });
+      }
+
+      await channel.send({ embeds: [embed] });
+
+      // If there are more than 20 price drops, send additional messages
+      if (dropFields.length > 20) {
+        const remainingFields = dropFields.slice(20);
         const chunks = [];
         for (let i = 0; i < remainingFields.length; i += 25) {
           chunks.push(remainingFields.slice(i, i + 25));
