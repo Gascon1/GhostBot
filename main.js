@@ -118,9 +118,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   const revealExpiredPredictionsTask = createRevealExpiredPredictionsTask(client);
   revealExpiredPredictionsTask.start();
 
-  // Create and start the price monitoring task with the client instance
-  const priceMonitoringTask = createPriceMonitoringTask(client);
-  priceMonitoringTask.start();
+  // Create and start the price monitoring tasks with the client instance
+  const priceMonitoringTasks = createPriceMonitoringTask(client);
+  priceMonitoringTasks.priceCheckTask.start();
+  priceMonitoringTasks.cleanupTask.start();
 
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });

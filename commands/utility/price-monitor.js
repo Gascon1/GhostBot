@@ -76,6 +76,19 @@ module.exports = {
             .setDescription('List ID to view history (use /price-monitor list to see IDs)')
             .setRequired(true),
         ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('cleanup')
+        .setDescription('Manually cleanup old price history (admin only)')
+        .addIntegerOption((option) =>
+          option
+            .setName('days')
+            .setDescription('Number of days of history to keep (default: 60)')
+            .setRequired(false)
+            .setMinValue(1)
+            .setMaxValue(365),
+        ),
     ),
 
   async execute(interaction) {
@@ -104,6 +117,9 @@ module.exports = {
           break;
         case 'history':
           await handleViewHistory(interaction, priceMonitoringService);
+          break;
+        case 'cleanup':
+          await handleCleanup(interaction, priceMonitoringService);
           break;
         default:
           await interaction.reply({
@@ -539,4 +555,62 @@ async function handleViewHistory(interaction, priceMonitoringService) {
   }
 
   await interaction.editReply({ embeds: [embed] });
+}
+
+/**
+ * Handle manual cleanup of old price history (admin only)
+ */
+async function handleCleanup(interaction, priceMonitoringService) {
+  // Check if user has admin permissions
+  if (!interaction.member.permissions.has('Administrator')) {
+    await interaction.reply({
+      content: '❌ This command requires Administrator permissions.',
+      ephemeral: true,
+    });
+    return;
+  }
+
+  const daysToKeep = interaction.options.getInteger('days') || 60;
+
+  await interaction.deferReply();
+
+  const result = await priceMonitoringService.cleanupOldPriceHistory(daysToKeep);
+
+  if (result.success) {
+    const embed = new EmbedBuilder()
+      .setTitle('🧹 Price History Cleanup Complete')
+      .setDescription(`Successfully cleaned up old price history records.`)
+      .addFields(
+        {
+          name: '📊 Records Deleted',
+          value: result.recordsDeleted.toString(),
+          inline: true,
+        },
+        {
+          name: '📈 Records Remaining',
+          value: result.recordsAfter.toString(),
+          inline: true,
+        },
+        {
+          name: '📅 Retention Period',
+          value: `${daysToKeep} days`,
+          inline: true,
+        },
+      )
+      .setColor(0x00ff00)
+      .setTimestamp()
+      .setFooter({
+        text: 'Automatic cleanup runs daily at 3 AM',
+      });
+
+    await interaction.editReply({ embeds: [embed] });
+  } else {
+    const embed = new EmbedBuilder()
+      .setTitle('❌ Cleanup Failed')
+      .setDescription(result.error)
+      .setColor(0xff0000)
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+  }
 }

@@ -4,13 +4,13 @@ const PriceMonitoringService = require('../lib/services/price-monitoring-service
 /**
  * Create a scheduled task for price monitoring
  * @param {Client} client - Discord client instance
- * @returns {Object} - Cron task object
+ * @returns {Object} - Object containing both cron tasks
  */
 function createPriceMonitoringTask(client) {
   const priceMonitoringService = new PriceMonitoringService();
 
-  // Schedule the task to run every 5 minutes
-  return cron.schedule('*/5 * * * *', async () => {
+  // Schedule price check to run every 5 minutes
+  const priceCheckTask = cron.schedule('*/5 * * * *', async () => {
     // Skip if the client is not ready yet
     if (!client.isReady()) {
       console.log('Discord client not ready, skipping price monitoring');
@@ -40,6 +40,26 @@ function createPriceMonitoringTask(client) {
       console.error('Error in price monitoring task:', error);
     }
   });
+
+  // Schedule cleanup to run daily at 3 AM
+  const cleanupTask = cron.schedule('0 3 * * *', async () => {
+    console.log('Starting price history cleanup...');
+
+    try {
+      const result = await priceMonitoringService.cleanupOldPriceHistory(60); // Keep 60 days
+
+      if (!result.success) {
+        console.error('Price history cleanup failed:', result.error);
+      }
+    } catch (error) {
+      console.error('Error in price history cleanup task:', error);
+    }
+  });
+
+  return {
+    priceCheckTask,
+    cleanupTask,
+  };
 }
 
 /**
