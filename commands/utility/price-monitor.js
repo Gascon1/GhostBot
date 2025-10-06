@@ -65,6 +65,17 @@ module.exports = {
             .setMinValue(0)
             .setMaxValue(100),
         ),
+    )
+    .addSubcommand((subcommand) =>
+      subcommand
+        .setName('history')
+        .setDescription('View recent price history for a monitored list')
+        .addIntegerOption((option) =>
+          option
+            .setName('id')
+            .setDescription('List ID to view history (use /price-monitor list to see IDs)')
+            .setRequired(true),
+        ),
     ),
 
   async execute(interaction) {
@@ -73,29 +84,32 @@ module.exports = {
 
     try {
       switch (subcommand) {
-      case 'add':
-        await handleAddList(interaction, priceMonitoringService);
-        break;
-      case 'list':
-        await handleListMonitored(interaction, priceMonitoringService);
-        break;
-      case 'remove':
-        await handleRemoveList(interaction, priceMonitoringService);
-        break;
-      case 'delete':
-        await handleDeleteList(interaction, priceMonitoringService);
-        break;
-      case 'check':
-        await handleManualCheck(interaction, priceMonitoringService);
-        break;
-      case 'thresholds':
-        await handleSetThresholds(interaction, priceMonitoringService);
-        break;
-      default:
-        await interaction.reply({
-          content: 'Unknown subcommand.',
-          ephemeral: true,
-        });
+        case 'add':
+          await handleAddList(interaction, priceMonitoringService);
+          break;
+        case 'list':
+          await handleListMonitored(interaction, priceMonitoringService);
+          break;
+        case 'remove':
+          await handleRemoveList(interaction, priceMonitoringService);
+          break;
+        case 'delete':
+          await handleDeleteList(interaction, priceMonitoringService);
+          break;
+        case 'check':
+          await handleManualCheck(interaction, priceMonitoringService);
+          break;
+        case 'thresholds':
+          await handleSetThresholds(interaction, priceMonitoringService);
+          break;
+        case 'history':
+          await handleViewHistory(interaction, priceMonitoringService);
+          break;
+        default:
+          await interaction.reply({
+            content: 'Unknown subcommand.',
+            ephemeral: true,
+          });
       }
     } catch (error) {
       console.error('Error in price-monitor command:', error);
@@ -372,7 +386,9 @@ async function handleSetThresholds(interaction, priceMonitoringService) {
           inline: true,
         },
       )
-      .setDescription('Only price changes above these thresholds will trigger notifications.\n\nTo update: `/price-monitor thresholds price-drop:5 price-increase:10`')
+      .setDescription(
+        'Only price changes above these thresholds will trigger notifications.\n\nTo update: `/price-monitor thresholds price-drop:5 price-increase:10`',
+      )
       .setColor(0x0099ff)
       .setTimestamp();
 
@@ -382,8 +398,10 @@ async function handleSetThresholds(interaction, priceMonitoringService) {
 
   // Update thresholds
   const currentThresholds = priceMonitoringService.getNotificationThresholds();
-  const newDropThreshold = priceDropThreshold !== null ? priceDropThreshold : currentThresholds.priceDropThresholdPercent;
-  const newIncreaseThreshold = priceIncreaseThreshold !== null ? priceIncreaseThreshold : currentThresholds.priceIncreaseThresholdPercent;
+  const newDropThreshold =
+    priceDropThreshold !== null ? priceDropThreshold : currentThresholds.priceDropThresholdPercent;
+  const newIncreaseThreshold =
+    priceIncreaseThreshold !== null ? priceIncreaseThreshold : currentThresholds.priceIncreaseThresholdPercent;
 
   const result = priceMonitoringService.setNotificationThresholds(newDropThreshold, newIncreaseThreshold);
 
@@ -416,4 +434,109 @@ async function handleSetThresholds(interaction, priceMonitoringService) {
 
     await interaction.editReply({ embeds: [embed] });
   }
+}
+
+/**
+ * Handle viewing price history for a monitored list
+ */
+async function handleViewHistory(interaction, priceMonitoringService) {
+  const listId = interaction.options.getInteger('id');
+
+  await interaction.deferReply();
+
+  const result = await priceMonitoringService.getListPriceHistory(listId);
+
+  if (!result.success) {
+    const embed = new EmbedBuilder()
+      .setTitle('❌ Failed to Fetch History')
+      .setDescription(result.error)
+      .setColor(0xff0000)
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+    return;
+  }
+
+  if (result.history.length === 0) {
+    const embed = new EmbedBuilder()
+      .setTitle('📊 Price History')
+      .setDescription(`No price history available for **${result.listName}**.`)
+      .setColor(0x999999)
+      .setTimestamp();
+
+    await interaction.editReply({ embeds: [embed] });
+    return;
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle('📊 Recent Price History')
+    .setDescription(
+      `**${result.listName}**\n\nShowing the last ${result.history.length} recorded price${result.history.length !== 1 ? 's' : ''} for each part.`,
+    )
+    .setColor(0x0099ff)
+    .setTimestamp()
+    .setFooter({
+      text: 'PC Parts Price Monitor',
+    });
+
+  // Group by part and show the last few prices for each
+  const partGroups = {};
+  for (const record of result.history) {
+    if (!partGroups[record.part_id]) {
+      partGroups[record.part_id] = {
+        partName: record.part_name,
+        partType: record.part_type,
+        prices: [],
+      };
+    }
+    partGroups[record.part_id].prices.push({
+      price: record.price,
+      merchant: record.merchant,
+      timestamp: record.timestamp,
+    });
+  }
+
+  // Add fields for each part (limit to 25 fields for Discord)
+  let fieldCount = 0;
+  for (const partId in partGroups) {
+    if (fieldCount >= 25) break;
+
+    const part = partGroups[partId];
+    const priceList = part.prices
+      .slice(0, 10) // Last 10 prices per part
+      .map((p, idx) => {
+        const date = new Date(p.timestamp);
+        const formattedDate = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+        const prevPrice = idx < part.prices.length - 1 ? part.prices[idx + 1].price : null;
+
+        let changeIndicator = '';
+        if (prevPrice !== null) {
+          const diff = p.price - prevPrice;
+          if (diff < 0) {
+            changeIndicator = ` 🔽 (-$${Math.abs(diff).toFixed(2)})`;
+          } else if (diff > 0) {
+            changeIndicator = ` 🔼 (+$${diff.toFixed(2)})`;
+          }
+        }
+
+        return `**$${p.price.toFixed(2)}**${changeIndicator} | ${p.merchant || 'N/A'} | ${formattedDate}`;
+      })
+      .join('\n');
+
+    embed.addFields({
+      name: `${part.partType} | ${part.partName}`,
+      value: priceList || 'No price data',
+      inline: false,
+    });
+
+    fieldCount++;
+  }
+
+  if (Object.keys(partGroups).length > 25) {
+    embed.setFooter({
+      text: `Showing first 25 of ${Object.keys(partGroups).length} parts. PC Parts Price Monitor`,
+    });
+  }
+
+  await interaction.editReply({ embeds: [embed] });
 }
